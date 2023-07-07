@@ -34,6 +34,7 @@ pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
             if is_point_in_circle(&musician_area, &attendee_point) {
                 let dsq = (attendee_point - *musician.0).norm();
                 score += (1e6 * attendee.tastes[*musician.1 as usize] / dsq).ceil() as i64;
+                pb.inc(1);
                 continue 'attendee;
             }
         }
@@ -79,7 +80,7 @@ fn is_valid_answer(sol: &Solution) -> bool {
             }
             if (*musician_point - *check_musician_point).length() < 10.0 {
                 is_valid = false;
-                println!("{musician_idx} is not far enough from {musician_idx}");
+                println!("{musician_idx} is not far enough from {check_musician_idx}");
             }
         }
     }
@@ -108,10 +109,10 @@ fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
     let d = line.p2 - line.p1;
     let n = d.normalize();
     let pa = line.p1 - circle.c;
+    let pb = line.p2 - circle.c;
     if n.dot(pa) <= 0. {
         return pa.length() < circle.r;
     }
-    let pb = line.p2 - circle.c;
     if n.dot(pb) >= 0. {
         return pb.length() < circle.r;
     }
