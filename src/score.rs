@@ -28,13 +28,12 @@ pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
             .collect();
         for (_musician_idx, musician) in musicians.iter() {
             let musician_area = Circle {
-                x: musician.0.x,
-                y: musician.0.y,
+                c: *musician.0,
                 r: 5.0,
             };
             if is_point_in_circle(&musician_area, &attendee_point) {
-                let d = distance_point_point(&attendee_point, musician.0);
-                score += (1e6 * attendee.tastes[*musician.1 as usize] / d.powf(2.0)).ceil() as i64;
+                let dsq = (attendee_point - *musician.0).norm();
+                score += (1e6 * attendee.tastes[*musician.1 as usize] / dsq).ceil() as i64;
                 continue 'attendee;
             }
         }
@@ -45,14 +44,14 @@ pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
                     continue;
                 }
                 let musician_attendee_line = Line {
-                    x1: attendee.x,
-                    y1: attendee.y,
-                    x2: musician.0.x,
-                    y2: musician.0.y,
+                    p1: Point {
+                        x: attendee.x,
+                        y: attendee.y,
+                    },
+                    p2: *musician.0,
                 };
                 let check_musician_area = Circle {
-                    x: check_musician.0.x,
-                    y: check_musician.0.y,
+                    c: *check_musician.0,
                     r: 5.0,
                 };
                 if is_cross_line_circle(&musician_attendee_line, &check_musician_area) {
@@ -60,8 +59,8 @@ pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
                 }
             }
             if valid_impact {
-                let d = distance_point_point(&attendee_point, musician.0);
-                score += (1e6 * attendee.tastes[*musician.1 as usize] / d.powf(2.0)).ceil() as i64;
+                let dsq = (attendee_point - *musician.0).norm();
+                score += (1e6 * attendee.tastes[*musician.1 as usize] / dsq).ceil() as i64;
             }
         }
         pb.inc(1);
@@ -78,7 +77,7 @@ fn is_valid_answer(sol: &Solution) -> bool {
             if musician_idx == check_musician_idx {
                 continue;
             }
-            if distance_point_point(musician_point, check_musician_point) < 10.0 {
+            if (*musician_point - *check_musician_point).length() < 10.0 {
                 is_valid = false;
                 println!("{musician_idx} is not far enough from {musician_idx}");
             }
@@ -89,40 +88,35 @@ fn is_valid_answer(sol: &Solution) -> bool {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 struct Line {
-    x1: f64,
-    y1: f64,
-    x2: f64,
-    y2: f64,
+    p1: Point,
+    p2: Point,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 struct Circle {
-    x: f64,
-    y: f64,
+    c: Point,
     r: f64,
 }
 
 fn is_point_in_circle(circle: &Circle, point: &Point) -> bool {
-    let center = Point {
-        x: circle.x,
-        y: circle.y,
-    };
-    let d: f64 = distance_point_point(&center, point);
+    let center = circle.c;
+    let d: f64 = (center - *point).length();
     d < circle.r
 }
 
 fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
-    let xd = line.x2 - line.x1;
-    let yd = line.y2 - line.y1;
-    let x = line.x1 - circle.x;
-    let y = line.y1 - circle.y;
-    let a = xd.powf(2.0) + yd.powf(2.0);
-    let b = xd * x + yd * y;
-    let c = x.powf(2.0) + y.powf(2.0) - circle.r.powf(2.0);
-    let d = b.powf(2.0) - a * c;
-    d < 0.0
-}
-
-fn distance_point_point(p1: &Point, p2: &Point) -> f64 {
-    ((p1.x - p2.x).powf(2.0) + (p1.y - p2.y).powf(2.0)).sqrt()
+    let d = line.p2 - line.p1;
+    let n = d.normalize();
+    let pa = line.p1 - circle.c;
+    if n.dot(pa) <= 0. {
+        return pa.length() < circle.r;
+    }
+    let pb = line.p2 - circle.c;
+    if n.dot(pb) >= 0. {
+        return pb.length() < circle.r;
+    }
+    let pan = pa.dot(n);
+    let pann = pan * n;
+    let lp = (pa - pann).length();
+    lp <= circle.r
 }
