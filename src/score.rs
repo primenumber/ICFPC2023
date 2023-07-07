@@ -3,35 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::{Point, Problem, Solution};
 
-#[derive(Serialize, Deserialize)]
-struct Input {
-    room_width: f64,
-    room_height: f64,
-    stage_width: f64,
-    stage_height: f64,
-    stage_bottom_left: Vec<f64>,
-    musicians: Vec<i32>,
-    attendees: Vec<Attendee>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Attendee {
-    x: f64,
-    y: f64,
-    tastes: Vec<f64>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Answer {
-    placements: Vec<Placement>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Placement {
-    x: f64,
-    y: f64,
-}
-
 pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
     let m: usize = prob.musicians.len();
 
