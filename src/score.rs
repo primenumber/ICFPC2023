@@ -1,75 +1,84 @@
 use anyhow::Result;
+use indicatif::ProgressBar;
 use serde::{Deserialize, Serialize};
 
 use crate::common::{Point, Problem, Solution};
 
 pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
-    let m: usize = prob.musicians.len();
+    let n: usize = prob.attendees.len();
 
-    if !is_valid_answer(sol, m) {
-        println!("score -1");
+    if !is_valid_answer(sol) {
+        println!("invalid solution");
         return Ok(());
     }
 
     let mut score: i64 = 0;
-    for attendee in prob.attendees.iter() {
-        for musician_idx in 0..m {
+
+    let pb = ProgressBar::new(n as u64);
+    'attendee: for attendee in prob.attendees.iter() {
+        let attendee_point = Point {
+            x: attendee.x,
+            y: attendee.y,
+        };
+        let musicians: Vec<(usize, (&Point, &u32))> = sol
+            .placements
+            .iter()
+            .zip(prob.musicians.iter())
+            .enumerate()
+            .collect();
+        for (_musician_idx, musician) in musicians.iter() {
+            let musician_area = Circle {
+                x: musician.0.x,
+                y: musician.0.y,
+                r: 5.0,
+            };
+            if is_point_in_circle(&musician_area, &attendee_point) {
+                let d = distance_point_point(&attendee_point, musician.0);
+                score += (1e6 * attendee.tastes[*musician.1 as usize] / d.powf(2.0)).ceil() as i64;
+                continue 'attendee;
+            }
+        }
+        for (musician_idx, musician) in &musicians {
             let mut valid_impact = true;
-            for check_musician_idx in 0..m {
+            for (check_musician_idx, check_musician) in &musicians {
                 if musician_idx == check_musician_idx {
                     continue;
                 }
-                let line = Line {
+                let musician_attendee_line = Line {
                     x1: attendee.x,
                     y1: attendee.y,
-                    x2: sol.placements[musician_idx].x,
-                    y2: sol.placements[musician_idx].y,
+                    x2: musician.0.x,
+                    y2: musician.0.y,
                 };
-                let circle = Circle {
-                    x: sol.placements[check_musician_idx].x,
-                    y: sol.placements[check_musician_idx].y,
+                let check_musician_area = Circle {
+                    x: check_musician.0.x,
+                    y: check_musician.0.y,
                     r: 5.0,
                 };
-                if is_cross_line_circle(line, circle) {
+                if is_cross_line_circle(&musician_attendee_line, &check_musician_area) {
                     valid_impact = false;
                 }
             }
             if valid_impact {
-                let p1 = Point {
-                    x: attendee.x,
-                    y: attendee.y,
-                };
-                let p2 = Point {
-                    x: sol.placements[musician_idx].x,
-                    y: sol.placements[musician_idx].y,
-                };
-                let d = distance_point_point(p1, p2);
-                score += (1e6 * attendee.tastes[prob.musicians[musician_idx] as usize]
-                    / d.powf(2.0))
-                .ceil() as i64;
+                let d = distance_point_point(&attendee_point, musician.0);
+                score += (1e6 * attendee.tastes[*musician.1 as usize] / d.powf(2.0)).ceil() as i64;
             }
         }
+        pb.inc(1);
     }
+    pb.finish_with_message("finish calculation");
     println!("score {score}");
     Ok(())
 }
 
-fn is_valid_answer(sol: &Solution, m: usize) -> bool {
+fn is_valid_answer(sol: &Solution) -> bool {
     let mut is_valid = true;
-    for musician_idx in 0..m {
-        for check_musician_idx in 0..m {
+    for (musician_idx, musician_point) in sol.placements.iter().enumerate() {
+        for (check_musician_idx, check_musician_point) in sol.placements.iter().enumerate() {
             if musician_idx == check_musician_idx {
                 continue;
             }
-            let p1 = Point {
-                x: sol.placements[musician_idx].x,
-                y: sol.placements[musician_idx].y,
-            };
-            let p2 = Point {
-                x: sol.placements[check_musician_idx].x,
-                y: sol.placements[check_musician_idx].y,
-            };
-            if distance_point_point(p1, p2) < 10.0 {
+            if distance_point_point(musician_point, check_musician_point) < 10.0 {
                 is_valid = false;
                 println!("{musician_idx} is not far enough from {musician_idx}");
             }
@@ -93,7 +102,16 @@ struct Circle {
     r: f64,
 }
 
-fn is_cross_line_circle(line: Line, circle: Circle) -> bool {
+fn is_point_in_circle(circle: &Circle, point: &Point) -> bool {
+    let center = Point {
+        x: circle.x,
+        y: circle.y,
+    };
+    let d: f64 = distance_point_point(&center, point);
+    d < circle.r
+}
+
+fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
     let xd = line.x2 - line.x1;
     let yd = line.y2 - line.y1;
     let x = line.x1 - circle.x;
@@ -105,6 +123,6 @@ fn is_cross_line_circle(line: Line, circle: Circle) -> bool {
     d < 0.0
 }
 
-fn distance_point_point(p1: Point, p2: Point) -> f64 {
+fn distance_point_point(p1: &Point, p2: &Point) -> f64 {
     ((p1.x - p2.x).powf(2.0) + (p1.y - p2.y).powf(2.0)).sqrt()
 }
