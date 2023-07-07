@@ -8,8 +8,17 @@ pub enum SolveGreedyError {
     LackCandidatesError,
 }
 
-fn gain(_musician: u32, _attendees: &[Attendee], _place: Point) -> i64 {
-    0
+fn gain(musician: u32, attendees: &[Attendee], place: Point) -> i64 {
+    let mut sum = 0.;
+    for attendee in attendees {
+        let dsq = (Point {
+            x: attendee.x,
+            y: attendee.y,
+        } - place)
+            .norm();
+        sum += attendee.tastes[musician as usize] / dsq;
+    }
+    (sum * 1e6).ceil() as i64
 }
 
 fn solve_greedy_impl(

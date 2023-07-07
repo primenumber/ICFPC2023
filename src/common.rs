@@ -37,6 +37,22 @@ pub struct Point {
     pub y: f64,
 }
 
+impl Point {
+    pub fn norm(&self) -> f64 {
+        self.x * self.x + self.y * self.y
+    }
+}
+
+impl std::ops::Sub<Point> for Point {
+    type Output = Point;
+    fn sub(self, rhs: Point) -> Point {
+        Point {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Solution {
     pub placements: Vec<Point>,
