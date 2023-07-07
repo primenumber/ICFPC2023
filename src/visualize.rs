@@ -37,9 +37,7 @@ fn vis_attendee(attendee: &Attendee) -> Rectangle {
         .set("y", attendee.y - size / 2.)
         .set("width", size)
         .set("height", size)
-        .set("stroke-width", 0.1)
-        .set("stroke", "black")
-        .set("fill", "white")
+        .set("fill", "black")
 }
 
 fn vis_attendees(attendees: &[Attendee]) -> Group {
