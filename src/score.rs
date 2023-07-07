@@ -78,7 +78,7 @@ fn is_valid_answer(sol: &Solution) -> bool {
             if musician_idx == check_musician_idx {
                 continue;
             }
-            if (*musician_point - *check_musician_point).length() < 10.0 {
+            if (*musician_point - *check_musician_point).norm() < 100.0 {
                 is_valid = false;
                 println!("{musician_idx} is not far enough from {check_musician_idx}");
             }
@@ -101,8 +101,8 @@ struct Circle {
 
 fn is_point_in_circle(circle: &Circle, point: &Point) -> bool {
     let center = circle.c;
-    let d: f64 = (center - *point).length();
-    d < circle.r
+    let dsq: f64 = (center - *point).norm();
+    dsq < circle.r * circle.r
 }
 
 fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
@@ -111,13 +111,13 @@ fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
     let ap = circle.c - line.p1;
     let bp = circle.c - line.p2;
     if n.dot(ap) <= 0. {
-        return ap.length() <= circle.r;
+        return ap.norm() <= circle.r * circle.r;
     }
     if n.dot(bp) >= 0. {
-        return bp.length() <= circle.r;
+        return bp.norm() <= circle.r * circle.r;
     }
     let apn = ap.dot(n);
     let apnn = apn * n;
-    let lp = (ap - apnn).length();
-    lp <= circle.r
+    let norm = (ap - apnn).norm();
+    norm <= circle.r * circle.r
 }
