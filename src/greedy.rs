@@ -8,12 +8,16 @@ pub enum SolveGreedyError {
     LackCandidatesError,
 }
 
-pub fn solve_greedy_impl(
+fn gain(_musician: u32, _attendees: &[Attendee], _place: Point) -> i64 {
+    0
+}
+
+fn solve_greedy_impl(
     musician: u32,
     attendees: &[Attendee],
     candidates: &mut Vec<Point>,
 ) -> Result<Point> {
-    let (idx, score) = candidates
+    let (idx, _score) = candidates
         .iter()
         .enumerate()
         .max_by_key(|(_, &place)| gain(musician, attendees, place))
@@ -28,7 +32,7 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     let musicians_in_col = ((prob.stage_height - 10.) / 10.).floor() as usize;
     let mut placement_candidates = Vec::new();
     for row in 0..musicians_in_col {
-        for col in 0..musicians_in_col {
+        for col in 0..musicians_in_row {
             placement_candidates.push(Point {
                 x: musician_left + col as f64 * 10.,
                 y: musician_bottom + row as f64 * 10.,
