@@ -9,29 +9,16 @@ pub enum SolveGreedyError {
 }
 
 fn gain(musician: u32, attendees: &[Attendee], place: Point) -> i64 {
-    let mut sum = 0.;
+    let mut sum = 0;
     for attendee in attendees {
         let dsq = (Point {
             x: attendee.x,
             y: attendee.y,
         } - place)
             .norm();
-        sum += attendee.tastes[musician as usize] / dsq;
+        sum += (1e6 * attendee.tastes[musician as usize] / dsq).ceil() as i64;
     }
-    (sum * 1e6).ceil() as i64
-}
-
-fn solve_greedy_impl(
-    musician: u32,
-    attendees: &[Attendee],
-    candidates: &mut Vec<Point>,
-) -> Result<Point> {
-    let (idx, _score) = candidates
-        .iter()
-        .enumerate()
-        .max_by_key(|(_, &place)| gain(musician, attendees, place))
-        .ok_or(SolveGreedyError::LackCandidatesError)?;
-    Ok(candidates.swap_remove(idx))
+    sum
 }
 
 pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
