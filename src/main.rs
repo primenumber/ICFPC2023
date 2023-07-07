@@ -36,6 +36,11 @@ enum Commands {
         solution: PathBuf,
         token: String,
     },
+    Download {
+        id_from: u32,
+        id_to: u32,
+        output: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -67,6 +72,13 @@ fn main() -> Result<()> {
             let prob = Problem::load_from_file(problem)?;
             let sol = Solution::load_from_file(solution)?;
             score(&prob, &sol)?;
+        }
+        Commands::Download {
+            id_from,
+            id_to,
+            output,
+        } => {
+            download_problems(*id_from, *id_to, output);
         }
     }
     Ok(())

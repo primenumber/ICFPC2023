@@ -2,8 +2,9 @@ use anyhow::Result;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Attendee {
@@ -29,6 +30,30 @@ impl Problem {
         let reader = BufReader::new(f);
         Ok(serde_json::from_reader(reader)?)
     }
+}
+
+#[tokio::main]
+pub async fn download_problems(id_from: u32, id_to: u32, output: &PathBuf) {
+    let client = Arc::new(Client::new());
+    let fut = futures::future::join_all(
+        (id_from..=id_to)
+            .into_iter()
+            .map(|id| {
+                let client = client.clone();
+                let path = output.join(format!("{}.json", id));
+                (id, client, path)
+            })
+            .map(|(id, client, path)| async move {
+                let url = format!("https://cdn.icfpcontest.com/problems/{}.json", id);
+                let response = client.get(url).send().await?;
+                let body = response.text().await?;
+                let f = File::create(path)?;
+                let mut writer = BufWriter::new(f);
+                write!(writer, "{}", body)?;
+                Result::<()>::Ok(())
+            }),
+    );
+    let _ = tokio::spawn(fut).await;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
