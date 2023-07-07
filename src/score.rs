@@ -112,15 +112,23 @@ fn is_point_in_circle(circle: &Circle, point: &Point) -> bool {
 }
 
 fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
-    let xd = line.x2 - line.x1;
-    let yd = line.y2 - line.y1;
-    let x = line.x1 - circle.x;
-    let y = line.y1 - circle.y;
-    let a = xd.powf(2.0) + yd.powf(2.0);
-    let b = xd * x + yd * y;
-    let c = x.powf(2.0) + y.powf(2.0) - circle.r.powf(2.0);
-    let d = b.powf(2.0) - a * c;
+    let line = Line {
+        x1: line.x1 - circle.x,
+        y1: line.y1 - circle.y,
+        x2: line.x2 - circle.x,
+        y2: line.y2 - circle.y,
+    };
+    let a = line.x1.powf(2.0) + line.x2.powf(2.0) + line.y1.powf(2.0) + line.y2.powf(2.0)
+        - 2.0 * line.x1 * line.x2
+        - 2.0 * line.y1 * line.y1;
+    let b = 2.0 * line.x1 * line.x2 + 2.0 * line.y1 * line.y2
+        - 2.0 * line.x1.powf(2.0)
+        - 2.0 * line.y1.powf(2.0);
+    let c = line.x1.powf(2.0) + line.y1.powf(2.0) - circle.r.powf(2.0);
+    let d = b.powf(2.0) - 4.0 * a * c;
     d < 0.0
+        || (0.0 <= -b + d.sqrt() && -b + d.sqrt() <= 2.0 * a)
+        || (0.0 <= -b - d.sqrt() && -b - d.sqrt() <= 2.0 * a)
 }
 
 fn distance_point_point(p1: &Point, p2: &Point) -> f64 {
