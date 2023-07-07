@@ -1,5 +1,6 @@
 use crate::common::*;
 use anyhow::Result;
+use std::cmp::Reverse;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -39,13 +40,28 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     if placement_candidates.len() < prob.musicians.len() {
         return Err(SolveGreedyError::LackCandidatesError.into());
     }
-    let mut placements = Vec::new();
-    for &musician in &prob.musicians {
-        placements.push(solve_greedy_impl(
-            musician,
-            &prob.attendees,
-            &mut placement_candidates,
-        )?);
+    let mut gains = Vec::new();
+    for (i, &musician) in prob.musicians.iter().enumerate() {
+        for (j, &place) in placement_candidates.iter().enumerate() {
+            gains.push((gain(musician, &prob.attendees, place), i, j));
+        }
     }
+    gains.sort_unstable_by_key(|e| Reverse(e.0));
+    let mut musician_used = vec![false; prob.musicians.len()];
+    let mut place_used = vec![false; placement_candidates.len()];
+    let mut pairs = Vec::new();
+    for (_g, i, j) in gains {
+        if musician_used[i] || place_used[j] {
+            continue;
+        }
+        pairs.push((i, j));
+        musician_used[i] = true;
+        place_used[j] = true;
+    }
+    pairs.sort_unstable_by_key(|e| e.0);
+    let placements = pairs
+        .into_iter()
+        .map(|(_, j)| placement_candidates[j])
+        .collect();
     Ok(Solution { placements })
 }
