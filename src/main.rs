@@ -41,6 +41,9 @@ enum Commands {
         id_to: u32,
         output: PathBuf,
     },
+    ProbStats {
+        problem: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -79,6 +82,23 @@ fn main() -> Result<()> {
             output,
         } => {
             download_problems(*id_from, *id_to, output);
+        }
+        Commands::ProbStats { problem } => {
+            let prob = Problem::load_from_file(problem)?;
+            let left = prob.stage_bottom_left[0];
+            let bottom = prob.stage_bottom_left[1];
+            eprintln!(
+                "(W, H)=({}, {}), (l, b, w, h)=({}, {}, {}, {}), N={}, M={}, K={}",
+                prob.room_width,
+                prob.room_height,
+                left,
+                bottom,
+                prob.stage_width,
+                prob.stage_height,
+                prob.attendees.len(),
+                prob.musicians.len(),
+                prob.attendees.first().unwrap().tastes.len()
+            );
         }
     }
     Ok(())
