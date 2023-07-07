@@ -108,16 +108,16 @@ fn is_point_in_circle(circle: &Circle, point: &Point) -> bool {
 fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
     let d = line.p2 - line.p1;
     let n = d.normalize();
-    let pa = line.p1 - circle.c;
-    let pb = line.p2 - circle.c;
-    if n.dot(pa) <= 0. {
-        return pa.length() < circle.r;
+    let ap = circle.c - line.p1;
+    let bp = circle.c - line.p2;
+    if n.dot(ap) <= 0. {
+        return ap.length() <= circle.r;
     }
-    if n.dot(pb) >= 0. {
-        return pb.length() < circle.r;
+    if n.dot(bp) >= 0. {
+        return bp.length() <= circle.r;
     }
-    let pan = pa.dot(n);
-    let pann = pan * n;
-    let lp = (pa - pann).length();
+    let apn = ap.dot(n);
+    let apnn = apn * n;
+    let lp = (ap - apnn).length();
     lp <= circle.r
 }
