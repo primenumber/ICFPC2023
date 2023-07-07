@@ -1,8 +1,10 @@
 mod common;
 mod greedy;
+mod score;
 mod visualize;
 use crate::common::*;
 use crate::greedy::*;
+use crate::score::*;
 use crate::visualize::*;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -24,6 +26,10 @@ enum Commands {
         problem: PathBuf,
         solution: PathBuf,
         output: PathBuf,
+    },
+    Score {
+        problem: PathBuf,
+        solution: PathBuf,
     },
     Submit {
         id: u32,
@@ -56,6 +62,11 @@ fn main() -> Result<()> {
         } => {
             let sol = Solution::load_from_file(solution)?;
             sol.submit(*id, token)?;
+        }
+        Commands::Score { problem, solution } => {
+            let prob = Problem::load_from_file(problem)?;
+            let sol = Solution::load_from_file(solution)?;
+            score(&prob, &sol)?;
         }
     }
     Ok(())
