@@ -40,7 +40,7 @@ pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
         return Ok(());
     }
 
-    let mut score = 0;
+    let mut score: i64 = 0;
     for attendee in prob.attendees.iter() {
         for musician_idx in 0..m {
             let mut valid_impact = true;
@@ -75,7 +75,7 @@ pub fn score(prob: &Problem, sol: &Solution) -> Result<()> {
                 let d = distance_point_point(p1, p2);
                 score += (1e6 * attendee.tastes[prob.musicians[musician_idx] as usize]
                     / d.powf(2.0))
-                .ceil() as i32;
+                .ceil() as i64;
             }
         }
     }
