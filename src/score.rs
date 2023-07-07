@@ -117,7 +117,7 @@ fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
     let x = line.x1 - circle.x;
     let y = line.y1 - circle.y;
     let a = xd.powf(2.0) + yd.powf(2.0);
-    let b = xd.powf(x) + yd.powf(y);
+    let b = xd * x + yd * y;
     let c = x.powf(2.0) + y.powf(2.0) - circle.r.powf(2.0);
     let d = b.powf(2.0) - a * c;
     d < 0.0
