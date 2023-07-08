@@ -107,19 +107,33 @@ fn visible_attendees(attendees: &[Attendee], candidate: Point, placed: &[Point])
     res
 }
 
-fn generate_candidates(prob: &Problem) -> Result<Vec<Point>> {
+fn generate_candidates(prob: &Problem, diag: bool) -> Result<Vec<Point>> {
     let musician_left = prob.stage_bottom_left[0] + 10.;
     let musician_bottom = prob.stage_bottom_left[1] + 10.;
-    let min_distance = 10.;
-    let musicians_in_row = ((prob.stage_width - 10.) / min_distance).floor() as usize;
-    let musicians_in_col = ((prob.stage_height - 10.) / min_distance).floor() as usize;
+    let width_without_pad = prob.stage_width - 20.;
+    let height_without_pad = prob.stage_height - 20.;
+    let min_distance = if diag { 7.0711 } else { 10. };
+    let musicians_in_row = ((prob.stage_width - 20.) / min_distance).floor() as usize + 1;
+    let musicians_in_col = ((prob.stage_height - 20.) / min_distance).floor() as usize + 1;
     let mut placement_candidates = Vec::new();
     for row in 0..musicians_in_col {
         for col in 0..musicians_in_row {
-            placement_candidates.push(Point {
-                x: musician_left + col as f64 * min_distance,
-                y: musician_bottom + row as f64 * min_distance,
-            });
+            if diag && (row + col) % 2 == 1 {
+                continue;
+            }
+            let x = musician_left
+                + if col > 0 {
+                    col as f64 * width_without_pad / (musicians_in_row - 1) as f64
+                } else {
+                    0.0
+                };
+            let y = musician_bottom
+                + if row > 0 {
+                    row as f64 * height_without_pad / (musicians_in_col - 1) as f64
+                } else {
+                    0.0
+                };
+            placement_candidates.push(Point { x, y });
         }
     }
     if placement_candidates.len() < prob.musicians.len() {
@@ -129,7 +143,8 @@ fn generate_candidates(prob: &Problem) -> Result<Vec<Point>> {
 }
 
 pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
-    let mut placement_candidates = generate_candidates(prob)?;
+    let diag_mode = false;
+    let mut placement_candidates = generate_candidates(prob, diag_mode)?;
     let mut placed = Vec::new();
     let mut musicians: HashMap<_, _> = prob.musicians.iter().enumerate().collect();
     let mut pairs = Vec::new();
