@@ -2,7 +2,7 @@ use crate::common::*;
 use crate::geometry::*;
 use anyhow::Result;
 use ordered_float::NotNan;
-use std::cmp::{Ordering, Reverse};
+use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 use thiserror::Error;
 
@@ -10,25 +10,6 @@ use thiserror::Error;
 pub enum SolveGreedyError {
     #[error("Lack of candidates")]
     LackCandidatesError,
-}
-
-fn gain(musician: u32, attendees: &[Attendee], place: Point) -> i64 {
-    let mut sum = 0;
-    for attendee in attendees {
-        let dsq = (Point {
-            x: attendee.x,
-            y: attendee.y,
-        } - place)
-            .norm();
-        sum += (1e6 * attendee.tastes[musician as usize] / dsq).ceil() as i64;
-    }
-    sum
-}
-
-fn argcmp(p0: Point, p1: Point) -> Ordering {
-    ((p0.y, p0.x) < (0., 0.))
-        .cmp(&((p1.y, p1.x) < (0., 0.)))
-        .then_with(|| (p1.x * p0.y).partial_cmp(&(p0.x * p1.y)).unwrap())
 }
 
 fn visible_attendees(attendees: &[Attendee], candidate: Point, placed: &[Point]) -> Vec<usize> {
