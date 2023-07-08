@@ -1,33 +1,51 @@
 use crate::common::*;
+use crate::geometry::*;
 use anyhow::Result;
 use indicatif::ProgressBar;
-use serde::{Deserialize, Serialize};
 
-use crate::common::{Point, Problem, Solution};
+use crate::common::{Problem, Solution};
 
-fn impact(attendee: &Attendee, kinds: &[u32], placements: &[Point], musician_idx: usize) -> i64 {
+fn impact(
+    attendee: &Attendee,
+    kinds: &[u32],
+    placements: &[Point],
+    musician_idx: usize,
+    pillars: &[Pillar],
+) -> i64 {
     let attendee_point = Point {
         x: attendee.x,
         y: attendee.y,
     };
     let place = placements[musician_idx];
     let kind = kinds[musician_idx];
+    let musician_attendee_line = Line {
+        p1: Point {
+            x: attendee.x,
+            y: attendee.y,
+        },
+        p2: place,
+    };
     for (check_musician_idx, check_place) in placements.iter().enumerate() {
         if musician_idx == check_musician_idx {
             continue;
         }
-        let musician_attendee_line = Line {
-            p1: Point {
-                x: attendee.x,
-                y: attendee.y,
-            },
-            p2: place,
-        };
         let check_musician_area = Circle {
             c: *check_place,
             r: 5.0,
         };
-        if is_cross_line_circle(&musician_attendee_line, &check_musician_area) {
+        if is_cross_line_circle(musician_attendee_line, check_musician_area) {
+            return 0;
+        }
+    }
+    for pillar in pillars {
+        let check_pillar_area = Circle {
+            c: Point {
+                x: pillar.center.0,
+                y: pillar.center.1,
+            },
+            r: pillar.radius,
+        };
+        if is_cross_line_circle(musician_attendee_line, check_pillar_area) {
             return 0;
         }
     }
@@ -35,10 +53,10 @@ fn impact(attendee: &Attendee, kinds: &[u32], placements: &[Point], musician_idx
     (1e6 * attendee.tastes[kind as usize] / dsq).ceil() as i64
 }
 
-fn happiness(attendee: &Attendee, musicians: &[u32], sol: &Solution) -> i64 {
+fn happiness(attendee: &Attendee, musicians: &[u32], pillars: &[Pillar], sol: &Solution) -> i64 {
     let mut score = 0;
     for (musician_idx, _) in musicians.iter().enumerate() {
-        score += impact(attendee, &musicians, &sol.placements, musician_idx);
+        score += impact(attendee, &musicians, &sol.placements, musician_idx, pillars);
     }
     score
 }
@@ -55,7 +73,7 @@ pub fn score(prob: &Problem, sol: &Solution, quiet: bool) -> Result<i64> {
 
     let pb = ProgressBar::new(n as u64);
     for attendee in prob.attendees.iter() {
-        score += happiness(&attendee, &prob.musicians, sol);
+        score += happiness(&attendee, &prob.musicians, &prob.pillars, sol);
         if !quiet {
             pb.inc(1);
         }
@@ -96,31 +114,6 @@ fn is_valid_answer(prob: &Problem, sol: &Solution) -> bool {
     is_valid
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-struct Line {
-    p1: Point,
-    p2: Point,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-struct Circle {
-    c: Point,
-    r: f64,
-}
-
-fn is_cross_line_circle(line: &Line, circle: &Circle) -> bool {
-    let d = line.p2 - line.p1;
-    let n = d.normalize();
-    let ap = circle.c - line.p1;
-    let bp = circle.c - line.p2;
-    if n.dot(ap) <= 0. {
-        return ap.norm() <= circle.r * circle.r;
-    }
-    if n.dot(bp) >= 0. {
-        return bp.norm() <= circle.r * circle.r;
-    }
-    let apn = ap.dot(n);
-    let apnn = apn * n;
-    let norm = (ap - apnn).norm();
-    norm <= circle.r * circle.r
+fn is_cross_line_circle(line: Line, circle: Circle) -> bool {
+    norm_segment_point(line, circle.c) <= circle.r * circle.r
 }

@@ -1,4 +1,5 @@
 use crate::common::*;
+use crate::geometry::*;
 use anyhow::Result;
 use std::path::PathBuf;
 use svg::node::element::{Circle, Group, Rectangle};

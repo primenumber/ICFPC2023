@@ -1,4 +1,5 @@
 mod common;
+mod geometry;
 mod greedy;
 mod score;
 mod visualize;
