@@ -44,6 +44,10 @@ enum Commands {
     ProbStats {
         problem: PathBuf,
     },
+    UserName {
+        new_name: String,
+        token: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -99,6 +103,9 @@ fn main() -> Result<()> {
                 prob.musicians.len(),
                 prob.attendees.first().unwrap().tastes.len()
             );
+        }
+        Commands::UserName { new_name, token } => {
+            change_user_name(new_name, token)?;
         }
     }
     Ok(())

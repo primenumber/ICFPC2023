@@ -144,3 +144,26 @@ impl Solution {
         Ok(())
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+struct UserName {
+    pub username: String,
+}
+
+#[tokio::main]
+pub async fn change_user_name(new_name: &str, token: &str) -> Result<()> {
+    let client = Client::new();
+    let url = "https://api.icfpcontest.com/user/update_username";
+    let body = UserName {
+        username: new_name.to_string(),
+    };
+    let response = client
+        .post(url)
+        .json(&body)
+        .bearer_auth(token)
+        .send()
+        .await?;
+    let body = response.text().await?;
+    println!("{}", body);
+    Ok(())
+}
