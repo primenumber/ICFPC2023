@@ -29,6 +29,15 @@ pub struct Pillar {
     pub radius: f64,
 }
 
+impl Pillar {
+    pub fn c(&self) -> Point {
+        Point {
+            x: self.center.0,
+            y: self.center.1,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Problem {
     pub room_width: f64,
@@ -46,6 +55,24 @@ impl Problem {
         let f = File::open(path)?;
         let reader = BufReader::new(f);
         Ok(serde_json::from_reader(reader)?)
+    }
+
+    pub fn stage_from(&self) -> Point {
+        Point {
+            x: self.stage_bottom_left[0],
+            y: self.stage_bottom_left[1],
+        }
+    }
+
+    pub fn stage_size(&self) -> Point {
+        Point {
+            x: self.stage_width,
+            y: self.stage_height,
+        }
+    }
+
+    pub fn stage_to(&self) -> Point {
+        self.stage_from() + self.stage_size()
     }
 }
 

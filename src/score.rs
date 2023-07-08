@@ -20,10 +20,7 @@ fn impact(
     let place = placements[musician_idx];
     let kind = kinds[musician_idx];
     let musician_attendee_line = Line {
-        p1: Point {
-            x: attendee.x,
-            y: attendee.y,
-        },
+        p1: attendee.place(),
         p2: place,
     };
     for (check_musician_idx, check_place) in placements.iter().enumerate() {
@@ -40,10 +37,7 @@ fn impact(
     }
     for pillar in pillars {
         let check_pillar_area = Circle {
-            c: Point {
-                x: pillar.center.0,
-                y: pillar.center.1,
-            },
+            c: pillar.c(),
             r: pillar.radius,
         };
         if is_cross_line_circle(musician_attendee_line, check_pillar_area) {
@@ -86,10 +80,10 @@ pub fn score(prob: &Problem, sol: &Solution, quiet: bool) -> Result<i64> {
 
 fn is_valid_answer(prob: &Problem, sol: &Solution) -> bool {
     let mut is_valid = true;
-    let stage_left = prob.stage_bottom_left[0];
-    let stage_bottom = prob.stage_bottom_left[1];
-    let stage_right = stage_left + prob.stage_width;
-    let stage_top = stage_bottom + prob.stage_height;
+    let stage_left = prob.stage_from().x;
+    let stage_bottom = prob.stage_from().y;
+    let stage_right = prob.stage_to().x;
+    let stage_top = prob.stage_to().y;
     for (musician_idx, musician_point) in sol.placements.iter().enumerate() {
         if musician_point.x < stage_left + 10.
             || musician_point.x > stage_right - 10.

@@ -24,6 +24,16 @@ impl Point {
     }
 }
 
+impl std::ops::Add<Point> for Point {
+    type Output = Point;
+    fn add(self, rhs: Point) -> Point {
+        Point {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+
 impl std::ops::Sub<Point> for Point {
     type Output = Point;
     fn sub(self, rhs: Point) -> Point {
@@ -43,6 +53,7 @@ impl std::ops::Mul<Point> for f64 {
         }
     }
 }
+
 #[derive(Debug, Clone, Copy)]
 pub struct Line {
     pub p1: Point,

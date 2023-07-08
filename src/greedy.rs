@@ -12,8 +12,8 @@ pub enum SolveGreedyError {
 }
 
 fn generate_candidates(prob: &Problem, diag: bool) -> Result<Vec<Point>> {
-    let musician_left = prob.stage_bottom_left[0] + 10.;
-    let musician_bottom = prob.stage_bottom_left[1] + 10.;
+    let musician_left = prob.stage_from().x + 10.;
+    let musician_bottom = prob.stage_from().y + 10.;
     let width_without_pad = prob.stage_width - 20.;
     let height_without_pad = prob.stage_height - 20.;
     let min_distance = if diag { 7.0711 } else { 10. };
@@ -57,10 +57,7 @@ fn check_non_blocking_pillars(
     };
     for pillar in pillars {
         let circle = Circle {
-            c: Point {
-                x: pillar.center.0,
-                y: pillar.center.1,
-            },
+            c: pillar.c(),
             r: pillar.radius,
         };
         if is_cross_line_circle(segment, circle) {
