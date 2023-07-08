@@ -88,5 +88,5 @@ fn distance_segment_point(line: Line, p: Point) -> f64 {
 }
 
 pub fn is_cross_line_circle(line: Line, circle: Circle) -> bool {
-    norm_segment_point(line, circle.c) <= circle.r * circle.r
+    norm_segment_point(line, circle.c) < circle.r * circle.r
 }
