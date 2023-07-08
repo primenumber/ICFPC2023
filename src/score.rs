@@ -10,15 +10,25 @@ pub fn impact_raw(attendee: &Attendee, kind: u32, place: Point) -> i64 {
     (1e6 * attendee.tastes[kind as usize] / dsq).ceil() as i64
 }
 
-fn impact(
-    attendee: &Attendee,
-    kinds: &[u32],
-    placements: &[Point],
-    musician_idx: usize,
-    pillars: &[Pillar],
-) -> i64 {
+fn check_pillow(attendee: &Attendee, place: Point, pillars: &[Pillar]) -> bool {
+    let musician_attendee_line = Line {
+        p1: attendee.place(),
+        p2: place,
+    };
+    for pillar in pillars {
+        let check_pillar_area = Circle {
+            c: pillar.c(),
+            r: pillar.radius,
+        };
+        if is_cross_line_circle(musician_attendee_line, check_pillar_area) {
+            return false;
+        }
+    }
+    true
+}
+
+fn check_other_musicians(attendee: &Attendee, placements: &[Point], musician_idx: usize) -> bool {
     let place = placements[musician_idx];
-    let kind = kinds[musician_idx];
     let musician_attendee_line = Line {
         p1: attendee.place(),
         p2: place,
@@ -32,18 +42,27 @@ fn impact(
             r: 5.0,
         };
         if is_cross_line_circle(musician_attendee_line, check_musician_area) {
-            return 0;
+            false;
         }
     }
-    for pillar in pillars {
-        let check_pillar_area = Circle {
-            c: pillar.c(),
-            r: pillar.radius,
-        };
-        if is_cross_line_circle(musician_attendee_line, check_pillar_area) {
-            return 0;
-        }
+    true
+}
+
+fn impact(
+    attendee: &Attendee,
+    kinds: &[u32],
+    placements: &[Point],
+    musician_idx: usize,
+    pillars: &[Pillar],
+) -> i64 {
+    if !check_other_musicians(attendee, placements, musician_idx) {
+        return 0;
     }
+    let place = placements[musician_idx];
+    if !check_pillow(attendee, place, pillars) {
+        return 0;
+    }
+    let kind = kinds[musician_idx];
     impact_raw(attendee, kind, place)
 }
 
