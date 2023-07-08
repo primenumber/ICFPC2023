@@ -5,6 +5,11 @@ use indicatif::ProgressBar;
 
 use crate::common::{Problem, Solution};
 
+pub fn impact_raw(attendee: &Attendee, kind: u32, place: Point) -> i64 {
+    let dsq = (attendee.place() - place).norm();
+    (1e6 * attendee.tastes[kind as usize] / dsq).ceil() as i64
+}
+
 fn impact(
     attendee: &Attendee,
     kinds: &[u32],
@@ -12,10 +17,6 @@ fn impact(
     musician_idx: usize,
     pillars: &[Pillar],
 ) -> i64 {
-    let attendee_point = Point {
-        x: attendee.x,
-        y: attendee.y,
-    };
     let place = placements[musician_idx];
     let kind = kinds[musician_idx];
     let musician_attendee_line = Line {
@@ -49,8 +50,7 @@ fn impact(
             return 0;
         }
     }
-    let dsq = (attendee_point - place).norm();
-    (1e6 * attendee.tastes[kind as usize] / dsq).ceil() as i64
+    impact_raw(attendee, kind, place)
 }
 
 fn happiness(attendee: &Attendee, musicians: &[u32], pillars: &[Pillar], sol: &Solution) -> i64 {

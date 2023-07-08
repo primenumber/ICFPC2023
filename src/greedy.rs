@@ -1,92 +1,14 @@
 use crate::common::*;
 use crate::geometry::*;
+use crate::score::*;
 use anyhow::Result;
-use ordered_float::NotNan;
-use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::HashMap;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum SolveGreedyError {
     #[error("Lack of candidates")]
     LackCandidatesError,
-}
-
-fn visible_attendees(attendees: &[Attendee], candidate: Point, placed: &[Point]) -> Vec<usize> {
-    let mut attendee_angles = Vec::new();
-    for (idx, attendee) in attendees.iter().enumerate() {
-        let d = Point {
-            x: attendee.x,
-            y: attendee.y,
-        } - candidate;
-        attendee_angles.push((d.y.atan2(d.x), d.norm(), idx));
-    }
-    attendee_angles.sort_by(|lhs, rhs| lhs.partial_cmp(rhs).unwrap());
-    let mut blocked_ranges = Vec::new();
-    let block_radius = 5.;
-    let tau = std::f64::consts::TAU;
-    for &place in placed.iter() {
-        let diff = place - candidate;
-        let distance = diff.length();
-        let angle = diff.y.atan2(diff.x);
-        let delta = (block_radius / distance).asin();
-        let from = angle - delta;
-        let to = angle + delta;
-        blocked_ranges.push((from, to, distance * delta.cos()));
-        if to >= tau {
-            blocked_ranges.push((from - tau, to - tau, distance * delta.cos()));
-        }
-        if from < 0. {
-            blocked_ranges.push((from + tau, to + tau, distance * delta.cos()));
-        }
-    }
-    let mut itr = attendee_angles.iter().peekable();
-    blocked_ranges.sort_by(|lhs, rhs| lhs.partial_cmp(rhs).unwrap());
-    let mut heap = BinaryHeap::<(Reverse<NotNan<f64>>, NotNan<f64>)>::new();
-    let mut res = Vec::new();
-    for (from, to, di) in blocked_ranges {
-        loop {
-            let Some(&(angle, dj, j)) = itr.peek() else { break };
-            if angle > &from {
-                break;
-            }
-            let _ = itr.next();
-            let mut to_be_pushed = true;
-            while let Some((dk, to_k)) = heap.peek() {
-                if to_k.into_inner() < *angle {
-                    heap.pop();
-                    continue;
-                }
-                if dk.0.into_inner() <= *dj {
-                    to_be_pushed = false;
-                }
-                break;
-            }
-            if to_be_pushed {
-                res.push(*j);
-            }
-        }
-        heap.push((Reverse(NotNan::new(di).unwrap()), NotNan::new(to).unwrap()));
-    }
-    loop {
-        let Some(&(angle, dj, j)) = itr.peek() else { break };
-        let _ = itr.next();
-        let mut to_be_pushed = true;
-        while let Some((dk, to_k)) = heap.peek() {
-            if to_k.into_inner() < *angle {
-                heap.pop();
-                continue;
-            }
-            if dk.0.into_inner() <= *dj {
-                to_be_pushed = false;
-            }
-            break;
-        }
-        if to_be_pushed {
-            res.push(*j);
-        }
-    }
-    res
 }
 
 fn generate_candidates(prob: &Problem, diag: bool) -> Result<Vec<Point>> {
@@ -124,76 +46,97 @@ fn generate_candidates(prob: &Problem, diag: bool) -> Result<Vec<Point>> {
     Ok(placement_candidates)
 }
 
-pub fn solve_greedy_optimized(prob: &Problem) -> Result<Solution> {
-    let diag_mode = false;
-    let mut placement_candidates = generate_candidates(prob, diag_mode)?;
-    let mut visible = Vec::new();
-    for _ in placement_candidates.iter() {
-        visible.push(vec![true; prob.attendees.len()]);
-    }
-    let mut placed = Vec::new();
-    let mut musicians: HashMap<_, _> = prob.musicians.iter().enumerate().collect();
-    let mut pairs = Vec::new();
-    while !musicians.is_empty() {
-        let mut max_gain = i64::MIN;
-        let mut max_gain_pidx = 0;
-        let mut max_gain_midx = 0;
-        for (pidx, &place) in placement_candidates.iter().enumerate() {
-            let atd_indices = visible_attendees(&prob.attendees, place, &placed);
-            for (midx, &&kind) in &musicians {
-                let mut impact_sum = 0;
-                for &aidx in &atd_indices {
-                    let atd = &prob.attendees[aidx];
-                    let dsq = (Point { x: atd.x, y: atd.y } - place).norm();
-                    impact_sum += (1e6 * atd.tastes[kind as usize] / dsq).ceil() as i64;
-                }
-                if impact_sum > max_gain {
-                    max_gain = impact_sum;
-                    max_gain_pidx = pidx;
-                    max_gain_midx = *midx;
-                }
-            }
+fn check_non_blocking_pillars(
+    attendee_place: Point,
+    musician_place: Point,
+    pillars: &[Pillar],
+) -> bool {
+    let segment = Line {
+        p1: attendee_place,
+        p2: musician_place,
+    };
+    for pillar in pillars {
+        let circle = Circle {
+            c: Point {
+                x: pillar.center.0,
+                y: pillar.center.1,
+            },
+            r: pillar.radius,
+        };
+        if is_cross_line_circle(segment, circle) {
+            return false;
         }
-        let place = placement_candidates.swap_remove(max_gain_pidx);
-        placed.push(place);
-        musicians.remove(&max_gain_midx);
-        pairs.push((max_gain_midx, place));
     }
-    pairs.sort_unstable_by_key(|e| e.0);
-    let placements = pairs.into_iter().map(|(_, place)| place).collect();
-    Ok(Solution { placements })
+    return true;
 }
 
 pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     let diag_mode = false;
-    let mut placement_candidates = generate_candidates(prob, diag_mode)?;
-    let mut placed = Vec::new();
+    let placement_candidates = generate_candidates(prob, diag_mode)?;
+    let mut visible = vec![vec![true; prob.attendees.len()]; placement_candidates.len()];
+    let mut current_impact = vec![vec![0; prob.musicians.len()]; placement_candidates.len()];
+    for (i, &place) in placement_candidates.iter().enumerate() {
+        for (j, vis) in visible[i].iter_mut().enumerate() {
+            let atd = &prob.attendees[j];
+            let atd_place = Point { x: atd.x, y: atd.y };
+            *vis = check_non_blocking_pillars(atd_place, place, &prob.pillars);
+            if !*vis {
+                continue;
+            }
+            for (k, &kind) in prob.musicians.iter().enumerate() {
+                current_impact[i][k] += impact_raw(atd, kind, place);
+            }
+        }
+    }
+    let mut used_places = vec![false; placement_candidates.len()];
+    let mut used_musicians = vec![false; prob.musicians.len()];
     let mut musicians: HashMap<_, _> = prob.musicians.iter().enumerate().collect();
     let mut pairs = Vec::new();
     while !musicians.is_empty() {
-        let mut max_gain = i64::MIN;
-        let mut max_gain_pidx = 0;
-        let mut max_gain_midx = 0;
-        for (pidx, &place) in placement_candidates.iter().enumerate() {
-            let atd_indices = visible_attendees(&prob.attendees, place, &placed);
-            for (midx, &&kind) in &musicians {
-                let mut impact_sum = 0;
-                for &aidx in &atd_indices {
-                    let atd = &prob.attendees[aidx];
-                    let dsq = (Point { x: atd.x, y: atd.y } - place).norm();
-                    impact_sum += (1e6 * atd.tastes[kind as usize] / dsq).ceil() as i64;
+        let (i, j, _) = current_impact
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| !used_places[*i])
+            .map(|(i, impacts)| {
+                let (j, impact) = impacts
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, _)| !used_musicians[*j])
+                    .max_by_key(|(_, &impact)| impact)
+                    .unwrap();
+                (i, j, *impact)
+            })
+            .max_by_key(|(_, _, v)| *v)
+            .unwrap();
+        let new_place = placement_candidates[i];
+        used_places[i] = true;
+        used_musicians[j] = true;
+        musicians.remove(&j);
+        pairs.push((j, placement_candidates[i]));
+        // update current_impact
+        let circle = Circle {
+            c: new_place,
+            r: 5.0,
+        };
+        for (j, atd) in prob.attendees.iter().enumerate() {
+            let atd_place = Point { x: atd.x, y: atd.y };
+            for (i, &candi_place) in placement_candidates.iter().enumerate() {
+                if used_places[i] {
+                    continue;
                 }
-                if impact_sum > max_gain {
-                    max_gain = impact_sum;
-                    max_gain_pidx = pidx;
-                    max_gain_midx = *midx;
+                let segment = Line {
+                    p1: atd_place,
+                    p2: candi_place,
+                };
+                if !is_cross_line_circle(segment, circle) || !visible[i][j] {
+                    continue;
+                }
+                visible[i][j] = false;
+                for (k, &kind) in prob.musicians.iter().enumerate() {
+                    current_impact[i][k] -= impact_raw(atd, kind, candi_place);
                 }
             }
         }
-        let place = placement_candidates.swap_remove(max_gain_pidx);
-        placed.push(place);
-        musicians.remove(&max_gain_midx);
-        pairs.push((max_gain_midx, place));
     }
     pairs.sort_unstable_by_key(|e| e.0);
     let placements = pairs.into_iter().map(|(_, place)| place).collect();

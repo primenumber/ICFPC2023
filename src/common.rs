@@ -14,6 +14,15 @@ pub struct Attendee {
     pub tastes: Vec<f64>,
 }
 
+impl Attendee {
+    pub fn place(&self) -> Point {
+        Point {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pillar {
     pub center: (f64, f64),
