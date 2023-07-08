@@ -124,6 +124,46 @@ fn generate_candidates(prob: &Problem, diag: bool) -> Result<Vec<Point>> {
     Ok(placement_candidates)
 }
 
+pub fn solve_greedy_optimized(prob: &Problem) -> Result<Solution> {
+    let diag_mode = false;
+    let mut placement_candidates = generate_candidates(prob, diag_mode)?;
+    let mut visible = Vec::new();
+    for _ in placement_candidates.iter() {
+        visible.push(vec![true; prob.attendees.len()]);
+    }
+    let mut placed = Vec::new();
+    let mut musicians: HashMap<_, _> = prob.musicians.iter().enumerate().collect();
+    let mut pairs = Vec::new();
+    while !musicians.is_empty() {
+        let mut max_gain = i64::MIN;
+        let mut max_gain_pidx = 0;
+        let mut max_gain_midx = 0;
+        for (pidx, &place) in placement_candidates.iter().enumerate() {
+            let atd_indices = visible_attendees(&prob.attendees, place, &placed);
+            for (midx, &&kind) in &musicians {
+                let mut impact_sum = 0;
+                for &aidx in &atd_indices {
+                    let atd = &prob.attendees[aidx];
+                    let dsq = (Point { x: atd.x, y: atd.y } - place).norm();
+                    impact_sum += (1e6 * atd.tastes[kind as usize] / dsq).ceil() as i64;
+                }
+                if impact_sum > max_gain {
+                    max_gain = impact_sum;
+                    max_gain_pidx = pidx;
+                    max_gain_midx = *midx;
+                }
+            }
+        }
+        let place = placement_candidates.swap_remove(max_gain_pidx);
+        placed.push(place);
+        musicians.remove(&max_gain_midx);
+        pairs.push((max_gain_midx, place));
+    }
+    pairs.sort_unstable_by_key(|e| e.0);
+    let placements = pairs.into_iter().map(|(_, place)| place).collect();
+    Ok(Solution { placements })
+}
+
 pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     let diag_mode = false;
     let mut placement_candidates = generate_candidates(prob, diag_mode)?;
