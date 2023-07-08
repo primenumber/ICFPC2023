@@ -124,7 +124,10 @@ fn update_impact(
 
 pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     let diag_mode = false;
+
     let placement_candidates = generate_candidates(prob, diag_mode)?;
+
+    // initial state
     let mut visible = vec![vec![true; prob.attendees.len()]; placement_candidates.len()];
     let mut current_impact = vec![vec![0; prob.musicians.len()]; placement_candidates.len()];
     for (i, &place) in placement_candidates.iter().enumerate() {
@@ -140,6 +143,8 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
             }
         }
     }
+
+    // place musicians greedy
     let mut used_places = vec![false; placement_candidates.len()];
     let mut used_musicians = vec![false; prob.musicians.len()];
     let mut musicians: HashMap<_, _> = prob.musicians.iter().enumerate().collect();
@@ -159,6 +164,8 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
             &placement_candidates,
         );
     }
+
+    // construct Solution
     pairs.sort_unstable_by_key(|e| e.0);
     let placements = pairs.into_iter().map(|(_, place)| place).collect();
     Ok(Solution { placements })
