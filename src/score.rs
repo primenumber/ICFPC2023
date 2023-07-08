@@ -43,7 +43,7 @@ fn happiness(attendee: &Attendee, musicians: &[u32], sol: &Solution) -> i64 {
     score
 }
 
-pub fn score(prob: &Problem, sol: &Solution) -> Result<i64> {
+pub fn score(prob: &Problem, sol: &Solution, quiet: bool) -> Result<i64> {
     let n: usize = prob.attendees.len();
 
     if !is_valid_answer(prob, sol) {
@@ -56,10 +56,13 @@ pub fn score(prob: &Problem, sol: &Solution) -> Result<i64> {
     let pb = ProgressBar::new(n as u64);
     for attendee in prob.attendees.iter() {
         score += happiness(&attendee, &prob.musicians, sol);
-        pb.inc(1);
+        if !quiet {
+            pb.inc(1);
+        }
     }
-    pb.finish_with_message("finish calculation");
-    println!("score {score}");
+    if !quiet {
+        pb.finish_with_message("finish calculation");
+    }
     Ok(score)
 }
 

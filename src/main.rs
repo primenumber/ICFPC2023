@@ -30,6 +30,7 @@ enum Commands {
     Score {
         problem: PathBuf,
         solution: PathBuf,
+        quiet: Option<bool>,
     },
     Submit {
         id: u32,
@@ -75,10 +76,15 @@ fn main() -> Result<()> {
             let sol = Solution::load_from_file(solution)?;
             sol.submit(*id, token)?;
         }
-        Commands::Score { problem, solution } => {
+        Commands::Score {
+            problem,
+            solution,
+            quiet,
+        } => {
             let prob = Problem::load_from_file(problem)?;
             let sol = Solution::load_from_file(solution)?;
-            score(&prob, &sol)?;
+            let s = score(&prob, &sol, quiet.unwrap_or(false))?;
+            println!("score: {}", s);
         }
         Commands::Download {
             id_from,
