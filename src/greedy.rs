@@ -104,11 +104,14 @@ fn update_impact(
     for (j, atd) in prob.attendees.iter().enumerate() {
         let atd_place = Point { x: atd.x, y: atd.y };
         for (i, &candi_place) in placement_candidates.iter().enumerate() {
+            if !visible[i][j] {
+                continue;
+            }
             let segment = Line {
                 p1: atd_place,
                 p2: candi_place,
             };
-            if !is_cross_line_circle(segment, circle) || !visible[i][j] {
+            if !is_cross_line_circle(segment, circle) {
                 continue;
             }
             visible[i][j] = false;
