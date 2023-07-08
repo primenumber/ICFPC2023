@@ -113,7 +113,3 @@ fn is_valid_answer(prob: &Problem, sol: &Solution) -> bool {
     }
     is_valid
 }
-
-fn is_cross_line_circle(line: Line, circle: Circle) -> bool {
-    norm_segment_point(line, circle.c) <= circle.r * circle.r
-}
