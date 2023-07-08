@@ -1,4 +1,5 @@
 use crate::common::*;
+use crate::geometry::*;
 use anyhow::Result;
 use ordered_float::NotNan;
 use std::cmp::{Ordering, Reverse};

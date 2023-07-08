@@ -1,3 +1,4 @@
+use crate::geometry::*;
 use anyhow::Result;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -61,50 +62,6 @@ pub async fn download_problems(id_from: u32, id_to: u32, output: &PathBuf) {
             }),
     );
     let _ = tokio::spawn(fut).await;
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-impl Point {
-    pub fn length(&self) -> f64 {
-        self.norm().sqrt()
-    }
-
-    pub fn norm(&self) -> f64 {
-        self.dot(*self)
-    }
-
-    pub fn dot(&self, rhs: Point) -> f64 {
-        self.x * rhs.x + self.y * rhs.y
-    }
-
-    pub fn normalize(&self) -> Point {
-        (1. / self.length()) * *self
-    }
-}
-
-impl std::ops::Sub<Point> for Point {
-    type Output = Point;
-    fn sub(self, rhs: Point) -> Point {
-        Point {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-        }
-    }
-}
-
-impl std::ops::Mul<Point> for f64 {
-    type Output = Point;
-    fn mul(self, rhs: Point) -> Point {
-        Point {
-            x: self * rhs.x,
-            y: self * rhs.y,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
