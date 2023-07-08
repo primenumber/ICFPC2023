@@ -67,6 +67,58 @@ fn check_non_blocking_pillars(
     return true;
 }
 
+fn find_best_pair(
+    current_impact: &[Vec<i64>],
+    used_places: &[bool],
+    used_musicians: &[bool],
+) -> (usize, usize) {
+    let (i, j, _) = current_impact
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !used_places[*i])
+        .map(|(i, impacts)| {
+            let (j, impact) = impacts
+                .iter()
+                .enumerate()
+                .filter(|(j, _)| !used_musicians[*j])
+                .max_by_key(|(_, &impact)| impact)
+                .unwrap();
+            (i, j, *impact)
+        })
+        .max_by_key(|(_, _, v)| *v)
+        .unwrap();
+    (i, j)
+}
+
+fn update_impact(
+    current_impact: &mut [Vec<i64>],
+    visible: &mut [Vec<bool>],
+    prob: &Problem,
+    new_place: Point,
+    placement_candidates: &[Point],
+) {
+    let circle = Circle {
+        c: new_place,
+        r: 5.0,
+    };
+    for (j, atd) in prob.attendees.iter().enumerate() {
+        let atd_place = Point { x: atd.x, y: atd.y };
+        for (i, &candi_place) in placement_candidates.iter().enumerate() {
+            let segment = Line {
+                p1: atd_place,
+                p2: candi_place,
+            };
+            if !is_cross_line_circle(segment, circle) || !visible[i][j] {
+                continue;
+            }
+            visible[i][j] = false;
+            for (k, &kind) in prob.musicians.iter().enumerate() {
+                current_impact[i][k] -= impact_raw(atd, kind, candi_place);
+            }
+        }
+    }
+}
+
 pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     let diag_mode = false;
     let placement_candidates = generate_candidates(prob, diag_mode)?;
@@ -90,50 +142,19 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     let mut musicians: HashMap<_, _> = prob.musicians.iter().enumerate().collect();
     let mut pairs = Vec::new();
     while !musicians.is_empty() {
-        let (i, j, _) = current_impact
-            .iter()
-            .enumerate()
-            .filter(|(i, _)| !used_places[*i])
-            .map(|(i, impacts)| {
-                let (j, impact) = impacts
-                    .iter()
-                    .enumerate()
-                    .filter(|(j, _)| !used_musicians[*j])
-                    .max_by_key(|(_, &impact)| impact)
-                    .unwrap();
-                (i, j, *impact)
-            })
-            .max_by_key(|(_, _, v)| *v)
-            .unwrap();
+        let (i, j) = find_best_pair(&current_impact, &used_places, &used_musicians);
         let new_place = placement_candidates[i];
         used_places[i] = true;
         used_musicians[j] = true;
         musicians.remove(&j);
-        pairs.push((j, placement_candidates[i]));
-        // update current_impact
-        let circle = Circle {
-            c: new_place,
-            r: 5.0,
-        };
-        for (j, atd) in prob.attendees.iter().enumerate() {
-            let atd_place = Point { x: atd.x, y: atd.y };
-            for (i, &candi_place) in placement_candidates.iter().enumerate() {
-                if used_places[i] {
-                    continue;
-                }
-                let segment = Line {
-                    p1: atd_place,
-                    p2: candi_place,
-                };
-                if !is_cross_line_circle(segment, circle) || !visible[i][j] {
-                    continue;
-                }
-                visible[i][j] = false;
-                for (k, &kind) in prob.musicians.iter().enumerate() {
-                    current_impact[i][k] -= impact_raw(atd, kind, candi_place);
-                }
-            }
-        }
+        pairs.push((j, new_place));
+        update_impact(
+            &mut current_impact,
+            &mut visible,
+            prob,
+            new_place,
+            &placement_candidates,
+        );
     }
     pairs.sort_unstable_by_key(|e| e.0);
     let placements = pairs.into_iter().map(|(_, place)| place).collect();
