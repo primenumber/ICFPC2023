@@ -103,6 +103,7 @@ pub async fn download_problems(id_from: u32, id_to: u32, output: &PathBuf) {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Solution {
     pub placements: Vec<Point>,
+    pub volumes: Vec<f64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

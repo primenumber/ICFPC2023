@@ -111,7 +111,11 @@ fn solve_greedy_play_together(
             })
             .collect();
         if musician_to_place.iter().all(|e| e.is_some()) {
-            return Ok(Solution { placements });
+            let volumes = vec![10.0; musician_to_place.len()];
+            return Ok(Solution {
+                placements,
+                volumes,
+            });
         }
         let current_impact: Vec<_> = musician_to_place
             .iter()
@@ -173,6 +177,7 @@ fn solve_greedy_impl(
     // place musicians greedy
     let mut musicians: HashMap<_, _> = prob.musicians.clone().into_iter().enumerate().collect();
     let mut pairs = Vec::new();
+    let volumes = vec![10.0; musicians.len()];
     while !musicians.is_empty() {
         let (i, j, d) = cache.find_best_matching();
         if together_mode && d == 0 {
@@ -192,7 +197,10 @@ fn solve_greedy_impl(
     // construct Solution
     pairs.sort_unstable_by_key(|e| e.0);
     let placements = pairs.into_iter().map(|(_, place)| place).collect();
-    Ok(Solution { placements })
+    Ok(Solution {
+        placements,
+        volumes,
+    })
 }
 
 pub fn solve_greedy(prob: &Problem) -> Result<Solution> {

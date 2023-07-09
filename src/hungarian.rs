@@ -44,7 +44,10 @@ pub fn optimize_hungarian(prob: &Problem, sol: &Solution) -> Result<Solution> {
         update_score_contrib(&mut score_contrib_table, musician_line, placement_line, m);
     }
 
-    Ok(Solution { placements })
+    Ok(Solution {
+        placements,
+        volumes: sol.volumes.clone(),
+    })
 }
 
 fn create_score_contrib_table(
