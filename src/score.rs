@@ -48,7 +48,7 @@ fn check_other_musicians(attendee: &Attendee, placements: &[Point], musician_idx
     true
 }
 
-fn impact(
+pub fn impact(
     attendee: &Attendee,
     kinds: &[u32],
     placements: &[Point],

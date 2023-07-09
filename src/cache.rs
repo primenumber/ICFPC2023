@@ -7,8 +7,8 @@ pub struct DiffCache {
     visible: Vec<Vec<bool>>,
     impact_diff: Vec<Vec<i64>>,
     impact_diff_blocking: Vec<Vec<i64>>,
-    musician_to_place: Vec<Option<usize>>,
-    place_to_musician: Vec<Option<usize>>,
+    pub musician_to_place: Vec<Option<usize>>,
+    pub place_to_musician: Vec<Option<usize>>,
 }
 
 impl DiffCache {
