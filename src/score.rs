@@ -10,7 +10,7 @@ pub fn impact_raw(attendee: &Attendee, kind: u32, place: Point) -> i64 {
     (1e6 * attendee.tastes[kind as usize] / dsq).ceil() as i64
 }
 
-fn check_pillow(attendee: &Attendee, place: Point, pillars: &[Pillar]) -> bool {
+fn check_pillars(attendee: &Attendee, place: Point, pillars: &[Pillar]) -> bool {
     let musician_attendee_line = Line {
         p1: attendee.place(),
         p2: place,
@@ -59,7 +59,7 @@ fn impact(
         return 0;
     }
     let place = placements[musician_idx];
-    if !check_pillow(attendee, place, pillars) {
+    if !check_pillars(attendee, place, pillars) {
         return 0;
     }
     let kind = kinds[musician_idx];
