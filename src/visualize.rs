@@ -38,7 +38,7 @@ fn vis_attendee(attendee: &Attendee) -> Rectangle {
         .set("y", attendee.y - size / 2.)
         .set("width", size)
         .set("height", size)
-        .set("fill", "black")
+        .set("fill", "blue")
 }
 
 fn vis_attendees(attendees: &[Attendee]) -> Group {
@@ -87,6 +87,22 @@ fn vis_stage(width: f64, height: f64, bottom_left: &[f64]) -> Rectangle {
         .set("fill", "gray")
 }
 
+fn vis_pillar(pillar: &Pillar) -> Circle {
+    Circle::new()
+        .set("cx", pillar.c().x)
+        .set("cy", pillar.c().y)
+        .set("r", pillar.radius)
+        .set("fill", "black")
+}
+
+fn vis_pillars(pilars: &[Pillar]) -> Group {
+    let mut g = Group::new();
+    for pillar in pilars {
+        g = g.add(vis_pillar(&pillar));
+    }
+    g
+}
+
 pub fn visualize(prob: &Problem, sol: &Solution, output: &PathBuf) -> Result<()> {
     let w = prob.room_width as i32;
     let h = prob.room_height as i32;
@@ -106,6 +122,7 @@ pub fn visualize(prob: &Problem, sol: &Solution, output: &PathBuf) -> Result<()>
         prob.stage_height,
         &prob.stage_bottom_left,
     ));
+    doc = doc.add(vis_pillars(&prob.pillars));
     let max_kind = prob.attendees.first().unwrap().tastes.len();
     doc = doc.add(vis_attendees(&prob.attendees));
     doc = doc.add(vis_musicians(&prob.musicians, max_kind, &sol.placements));
