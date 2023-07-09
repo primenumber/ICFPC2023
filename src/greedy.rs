@@ -1,3 +1,4 @@
+use crate::cache::*;
 use crate::common::*;
 use crate::geometry::*;
 use crate::score::*;
@@ -101,7 +102,7 @@ fn update_impact(
     }
 }
 
-pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
+pub fn solve_greedy_old(prob: &Problem) -> Result<Solution> {
     let diag_mode = false;
 
     let placement_candidates = generate_candidates(prob, diag_mode)?;
@@ -141,6 +142,30 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
             new_place,
             &placement_candidates,
         );
+    }
+
+    // construct Solution
+    pairs.sort_unstable_by_key(|e| e.0);
+    let placements = pairs.into_iter().map(|(_, place)| place).collect();
+    Ok(Solution { placements })
+}
+
+pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
+    let diag_mode = false;
+
+    let placement_candidates = generate_candidates(prob, diag_mode)?;
+
+    let mut cache = DiffCache::new(prob, &placement_candidates);
+
+    // place musicians greedy
+    let mut musicians: HashMap<_, _> = prob.musicians.iter().enumerate().collect();
+    let mut pairs = Vec::new();
+    while !musicians.is_empty() {
+        let (i, j, _d) = cache.find_best_matching();
+        cache.add_matching(prob, i, j);
+        let new_place = placement_candidates[i];
+        musicians.remove(&j);
+        pairs.push((j, new_place));
     }
 
     // construct Solution
