@@ -70,7 +70,7 @@ pub fn impact(
     impact_raw(attendee, kind, place)
 }
 
-fn happiness(
+pub fn happiness(
     attendee: &Attendee,
     musicians: &[u32],
     pillars: &[Pillar],
@@ -79,7 +79,8 @@ fn happiness(
 ) -> i64 {
     let mut score = 0;
     for (musician_idx, scale) in scalar.iter().enumerate() {
-        score += (impact(attendee, &musicians, &sol.placements, musician_idx, pillars) as f64
+        score += (sol.volumes[musician_idx]
+            * impact(attendee, &musicians, &sol.placements, musician_idx, pillars) as f64
             * scale)
             .ceil() as i64;
     }

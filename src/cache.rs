@@ -40,7 +40,7 @@ impl DiffCache {
         }
     }
 
-    pub fn find_best_matching(&self) -> (usize, usize, i64) {
+    pub fn find_best_matching(&self) -> (usize, usize, i64, f64) {
         self.impact_diff
             .iter()
             .enumerate()
@@ -53,13 +53,17 @@ impl DiffCache {
                     .max_by_key(|(_, &impact)| impact)
                     .unwrap();
                 let penalty: i64 = self.impact_diff_blocking[i].iter().sum();
-                (i, j, *impact + penalty)
+                if *impact >= 0 {
+                    (i, j, 10 * *impact + penalty, 10.0)
+                } else {
+                    (i, j, penalty, 0.0)
+                }
             })
-            .max_by_key(|(_, _, v)| *v)
+            .max_by_key(|(_, _, v, _)| *v)
             .unwrap()
     }
 
-    fn update_direct(&mut self, prob: &Problem, pidx: usize, midx: usize) -> i64 {
+    fn update_direct(&mut self, prob: &Problem, pidx: usize, midx: usize, volumes: &[f64]) -> i64 {
         let place_self = self.places[pidx];
         for (i, &place_another) in self.places.iter().enumerate() {
             if self.place_to_musician[i].is_some() {
@@ -82,7 +86,7 @@ impl DiffCache {
                 }
             }
         }
-        self.impact_diff[pidx][midx]
+        (self.impact_diff[pidx][midx] as f64 * volumes[midx]).ceil() as i64
     }
 
     fn update_block_dec(
@@ -92,6 +96,7 @@ impl DiffCache {
         i: usize,
         place_another: Point,
         midx_another: usize,
+        volumes: &[f64],
     ) {
         let place_self = self.places[pidx];
         let block_area_self = Circle {
@@ -113,7 +118,8 @@ impl DiffCache {
                     let block_area_2 = Circle { c: place2, r: 5.0 };
                     if is_cross_line_circle(segment_another, block_area_2) {
                         self.impact_diff_blocking[ii][midx_another] +=
-                            impact_raw(atd, kind, place_another);
+                            (impact_raw(atd, kind, place_another) as f64 * volumes[midx_another])
+                                .ceil() as i64;
                     }
                 }
             }
@@ -127,6 +133,7 @@ impl DiffCache {
         midx: usize,
         i: usize,
         place_another: Point,
+        volumes: &[f64],
     ) {
         let place_self = self.places[pidx];
         let kind_self = prob.musicians[midx];
@@ -140,12 +147,13 @@ impl DiffCache {
                 p2: atd.place(),
             };
             if is_cross_line_circle(segment_self, block_area_another) && self.visible[pidx][j] {
-                self.impact_diff_blocking[i][midx] -= impact_raw(atd, kind_self, place_self);
+                self.impact_diff_blocking[i][midx] -=
+                    (impact_raw(atd, kind_self, place_self) as f64 * volumes[midx]).ceil() as i64;
             }
         }
     }
 
-    fn update_block(&mut self, prob: &Problem, pidx: usize, midx: usize) -> i64 {
+    fn update_block(&mut self, prob: &Problem, pidx: usize, midx: usize, volumes: &[f64]) -> i64 {
         let mut diff = 0;
         for (k, opt_place) in self.musician_to_place.iter().enumerate() {
             if let Some(_) = opt_place {
@@ -159,21 +167,27 @@ impl DiffCache {
             }
             match self.place_to_musician[i] {
                 Some(midx_another) => {
-                    self.update_block_dec(prob, pidx, i, self.places[i], midx_another);
+                    self.update_block_dec(prob, pidx, i, self.places[i], midx_another, volumes);
                 }
                 None => {
-                    self.update_block_inc(prob, pidx, midx, i, self.places[i]);
+                    self.update_block_inc(prob, pidx, midx, i, self.places[i], volumes);
                 }
             }
         }
         diff
     }
 
-    pub fn add_matching(&mut self, prob: &Problem, pidx: usize, midx: usize) -> i64 {
+    pub fn add_matching(
+        &mut self,
+        prob: &Problem,
+        pidx: usize,
+        midx: usize,
+        volumes: &[f64],
+    ) -> i64 {
         assert!(self.musician_to_place[midx].is_none());
         assert!(self.place_to_musician[pidx].is_none());
         self.musician_to_place[midx] = Some(pidx);
         self.place_to_musician[pidx] = Some(midx);
-        self.update_direct(prob, pidx, midx) + self.update_block(prob, pidx, midx)
+        self.update_direct(prob, pidx, midx, volumes) + self.update_block(prob, pidx, midx, volumes)
     }
 }

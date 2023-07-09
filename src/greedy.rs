@@ -97,6 +97,7 @@ fn generate_candidates(prob: &Problem, mode: PlacementMode) -> Result<Vec<Point>
 
 fn solve_greedy_play_together(
     prob: &Problem,
+    mut volumes: Vec<f64>,
     placement_candidates: &[Point],
     mut musician_to_place: Vec<Option<usize>>,
     mut place_to_musician: Vec<Option<usize>>,
@@ -111,7 +112,6 @@ fn solve_greedy_play_together(
             })
             .collect();
         if musician_to_place.iter().all(|e| e.is_some()) {
-            let volumes = vec![10.0; musician_to_place.len()];
             return Ok(Solution {
                 placements,
                 volumes,
@@ -162,6 +162,7 @@ fn solve_greedy_play_together(
             .unwrap();
         place_to_musician[i] = Some(j);
         musician_to_place[j] = Some(i);
+        volumes[j] = 0.0;
     }
 }
 
@@ -177,18 +178,20 @@ fn solve_greedy_impl(
     // place musicians greedy
     let mut musicians: HashMap<_, _> = prob.musicians.clone().into_iter().enumerate().collect();
     let mut pairs = Vec::new();
-    let volumes = vec![10.0; musicians.len()];
+    let mut volumes = vec![10.0; musicians.len()];
     while !musicians.is_empty() {
-        let (i, j, d) = cache.find_best_matching();
+        let (i, j, d, v) = cache.find_best_matching();
         if together_mode && d == 0 {
             return solve_greedy_play_together(
                 prob,
+                volumes,
                 &placement_candidates,
                 cache.musician_to_place,
                 cache.place_to_musician,
             );
         }
-        cache.add_matching(prob, i, j);
+        volumes[j] = v;
+        cache.add_matching(prob, i, j, &volumes);
         let new_place = placement_candidates[i];
         musicians.remove(&j);
         pairs.push((j, new_place));
@@ -211,7 +214,7 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
             sols.push((score(prob, &sol, true)?, sol));
         }
         if is_full_division_scoring(prob) {
-            if let Ok(sol) = solve_greedy_impl(prob, pmode, false) {
+            if let Ok(sol) = solve_greedy_impl(prob, pmode, true) {
                 sols.push((score(prob, &sol, true)?, sol));
             }
         }
