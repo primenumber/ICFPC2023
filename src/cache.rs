@@ -85,6 +85,66 @@ impl DiffCache {
         self.impact_diff[pidx][midx]
     }
 
+    fn update_block_dec(
+        &mut self,
+        prob: &Problem,
+        pidx: usize,
+        i: usize,
+        place_another: Point,
+        midx_another: usize,
+    ) {
+        let place_self = self.places[pidx];
+        let block_area_self = Circle {
+            c: place_self,
+            r: 5.0,
+        };
+        for (j, atd) in prob.attendees.iter().enumerate() {
+            let segment_another = Line {
+                p1: place_another,
+                p2: atd.place(),
+            };
+            if is_cross_line_circle(segment_another, block_area_self) && self.visible[i][j] {
+                self.visible[i][j] = false;
+                let kind = prob.musicians[midx_another];
+                for (ii, &place2) in self.places.iter().enumerate() {
+                    if self.place_to_musician[ii].is_some() {
+                        continue;
+                    }
+                    let block_area_2 = Circle { c: place2, r: 5.0 };
+                    if is_cross_line_circle(segment_another, block_area_2) {
+                        self.impact_diff_blocking[ii][midx_another] +=
+                            impact_raw(atd, kind, place_another);
+                    }
+                }
+            }
+        }
+    }
+
+    fn update_block_inc(
+        &mut self,
+        prob: &Problem,
+        pidx: usize,
+        midx: usize,
+        i: usize,
+        place_another: Point,
+    ) {
+        let place_self = self.places[pidx];
+        let kind_self = prob.musicians[midx];
+        let block_area_another = Circle {
+            c: place_another,
+            r: 5.0,
+        };
+        for (j, atd) in prob.attendees.iter().enumerate() {
+            let segment_self = Line {
+                p1: place_self,
+                p2: atd.place(),
+            };
+            if is_cross_line_circle(segment_self, block_area_another) && self.visible[pidx][j] {
+                self.impact_diff_blocking[i][midx] -= impact_raw(atd, kind_self, place_self);
+            }
+        }
+    }
+
     fn update_block(&mut self, prob: &Problem, pidx: usize, midx: usize) -> i64 {
         let mut diff = 0;
         for (k, opt_place) in self.musician_to_place.iter().enumerate() {
@@ -92,56 +152,17 @@ impl DiffCache {
                 diff += self.impact_diff_blocking[pidx][k];
             }
         }
-        let place_self = self.places[pidx];
-        let kind_self = prob.musicians[midx];
-        for (i, &place_another) in self.places.iter().enumerate() {
+        let num = self.places.len();
+        for i in 0..num {
             if i == pidx {
                 continue;
             }
-            let block_area_self = Circle {
-                c: place_self,
-                r: 5.0,
-            };
-            let block_area_another = Circle {
-                c: place_another,
-                r: 5.0,
-            };
-            for (j, atd) in prob.attendees.iter().enumerate() {
-                let segment_self = Line {
-                    p1: place_self,
-                    p2: atd.place(),
-                };
-                let segment_another = Line {
-                    p1: place_another,
-                    p2: atd.place(),
-                };
-                match self.place_to_musician[i] {
-                    Some(midx_another) => {
-                        if is_cross_line_circle(segment_another, block_area_self)
-                            && self.visible[i][j]
-                        {
-                            self.visible[i][j] = false;
-                            let kind = prob.musicians[midx_another];
-                            for (ii, &place2) in self.places.iter().enumerate() {
-                                if self.place_to_musician[ii].is_some() {
-                                    continue;
-                                }
-                                let block_area_2 = Circle { c: place2, r: 5.0 };
-                                if is_cross_line_circle(segment_another, block_area_2) {
-                                    self.impact_diff_blocking[ii][midx_another] +=
-                                        impact_raw(atd, kind, place_another);
-                                }
-                            }
-                        }
-                    }
-                    None => {
-                        if is_cross_line_circle(segment_self, block_area_another)
-                            && self.visible[pidx][j]
-                        {
-                            self.impact_diff_blocking[i][midx] -=
-                                impact_raw(atd, kind_self, place_self);
-                        }
-                    }
+            match self.place_to_musician[i] {
+                Some(midx_another) => {
+                    self.update_block_dec(prob, pidx, i, self.places[i], midx_another);
+                }
+                None => {
+                    self.update_block_inc(prob, pidx, midx, i, self.places[i]);
                 }
             }
         }
