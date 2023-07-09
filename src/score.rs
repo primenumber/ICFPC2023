@@ -66,12 +66,45 @@ fn impact(
     impact_raw(attendee, kind, place)
 }
 
-fn happiness(attendee: &Attendee, musicians: &[u32], pillars: &[Pillar], sol: &Solution) -> i64 {
+fn happiness(
+    attendee: &Attendee,
+    musicians: &[u32],
+    pillars: &[Pillar],
+    sol: &Solution,
+    scalar: &[f64],
+) -> i64 {
     let mut score = 0;
-    for (musician_idx, _) in musicians.iter().enumerate() {
-        score += impact(attendee, &musicians, &sol.placements, musician_idx, pillars);
+    for (musician_idx, scale) in scalar.iter().enumerate() {
+        score += (impact(attendee, &musicians, &sol.placements, musician_idx, pillars) as f64
+            * scale)
+            .ceil() as i64;
     }
     score
+}
+
+pub fn is_full_division_scoring(prob: &Problem) -> bool {
+    !prob.pillars.is_empty()
+}
+
+fn play_together_scalar(prob: &Problem, sol: &Solution) -> Vec<f64> {
+    if !is_full_division_scoring(prob) {
+        return vec![1.0; sol.placements.len()];
+    }
+    sol.placements
+        .iter()
+        .zip(prob.musicians.iter())
+        .enumerate()
+        .map(|(i, (&pi, &ki))| {
+            let mut scalar = 1.0;
+            for (j, (&pj, &kj)) in sol.placements.iter().zip(prob.musicians.iter()).enumerate() {
+                if i == j || ki != kj {
+                    continue;
+                }
+                scalar += 1.0 / (pi - pj).length();
+            }
+            scalar
+        })
+        .collect()
 }
 
 pub fn score(prob: &Problem, sol: &Solution, quiet: bool) -> Result<i64> {
@@ -83,10 +116,11 @@ pub fn score(prob: &Problem, sol: &Solution, quiet: bool) -> Result<i64> {
     }
 
     let mut score: i64 = 0;
+    let scalar = play_together_scalar(prob, sol);
 
     let pb = ProgressBar::new(n as u64);
     for attendee in prob.attendees.iter() {
-        score += happiness(&attendee, &prob.musicians, &prob.pillars, sol);
+        score += happiness(&attendee, &prob.musicians, &prob.pillars, sol, &scalar);
         if !quiet {
             pb.inc(1);
         }
