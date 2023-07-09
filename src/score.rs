@@ -10,7 +10,7 @@ pub fn impact_raw(attendee: &Attendee, kind: u32, place: Point) -> i64 {
     (1e6 * attendee.tastes[kind as usize] / dsq).ceil() as i64
 }
 
-fn check_pillars(attendee: &Attendee, place: Point, pillars: &[Pillar]) -> bool {
+pub fn check_pillars(attendee: &Attendee, place: Point, pillars: &[Pillar]) -> bool {
     let musician_attendee_line = Line {
         p1: attendee.place(),
         p2: place,

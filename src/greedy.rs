@@ -46,27 +46,6 @@ fn generate_candidates(prob: &Problem, diag: bool) -> Result<Vec<Point>> {
     Ok(placement_candidates)
 }
 
-fn check_non_blocking_pillars(
-    attendee_place: Point,
-    musician_place: Point,
-    pillars: &[Pillar],
-) -> bool {
-    let segment = Line {
-        p1: attendee_place,
-        p2: musician_place,
-    };
-    for pillar in pillars {
-        let circle = Circle {
-            c: pillar.c(),
-            r: pillar.radius,
-        };
-        if is_cross_line_circle(segment, circle) {
-            return false;
-        }
-    }
-    return true;
-}
-
 fn find_best_pair(
     current_impact: &[Vec<i64>],
     used_places: &[bool],
@@ -133,8 +112,7 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
     for (i, &place) in placement_candidates.iter().enumerate() {
         for (j, vis) in visible[i].iter_mut().enumerate() {
             let atd = &prob.attendees[j];
-            let atd_place = Point { x: atd.x, y: atd.y };
-            *vis = check_non_blocking_pillars(atd_place, place, &prob.pillars);
+            *vis = check_pillars(atd, place, &prob.pillars);
             if !*vis {
                 continue;
             }
