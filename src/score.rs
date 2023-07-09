@@ -42,7 +42,7 @@ fn check_other_musicians(attendee: &Attendee, placements: &[Point], musician_idx
             r: 5.0,
         };
         if is_cross_line_circle(musician_attendee_line, check_musician_area) {
-            false;
+            return false;
         }
     }
     true
