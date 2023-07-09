@@ -27,7 +27,11 @@ pub fn check_pillars(attendee: &Attendee, place: Point, pillars: &[Pillar]) -> b
     true
 }
 
-fn check_other_musicians(attendee: &Attendee, placements: &[Point], musician_idx: usize) -> bool {
+pub fn check_other_musicians(
+    attendee: &Attendee,
+    placements: &[Point],
+    musician_idx: usize,
+) -> bool {
     let place = placements[musician_idx];
     let musician_attendee_line = Line {
         p1: attendee.place(),
