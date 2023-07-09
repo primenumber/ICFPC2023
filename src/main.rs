@@ -2,10 +2,12 @@ mod cache;
 mod common;
 mod geometry;
 mod greedy;
+mod hungarian;
 mod score;
 mod visualize;
 use crate::common::*;
 use crate::greedy::*;
+use crate::hungarian::*;
 use crate::score::*;
 use crate::visualize::*;
 use anyhow::Result;
@@ -22,6 +24,11 @@ struct Cli {
 enum Commands {
     Solve {
         input: PathBuf,
+        output: PathBuf,
+    },
+    Optimize {
+        problem: PathBuf,
+        solution: PathBuf,
         output: PathBuf,
     },
     Visualize {
@@ -60,6 +67,16 @@ fn main() -> Result<()> {
             let prob = Problem::load_from_file(input)?;
             let sol = solve_greedy(&prob)?;
             sol.save_to_file(output)?;
+        }
+        Commands::Optimize {
+            problem,
+            solution,
+            output,
+        } => {
+            let prob = Problem::load_from_file(problem)?;
+            let sol: Solution = Solution::load_from_file(solution)?;
+            let opt_sol = optimize_hungarian(&prob, &sol)?;
+            opt_sol.save_to_file(output)?;
         }
         Commands::Visualize {
             problem,
