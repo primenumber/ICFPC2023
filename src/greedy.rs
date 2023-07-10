@@ -1,8 +1,10 @@
 use crate::cache::*;
 use crate::common::*;
 use crate::geometry::*;
+use crate::hungarian::*;
 use crate::score::*;
 use anyhow::Result;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -278,20 +280,21 @@ pub fn solve_greedy(prob: &Problem) -> Result<Solution> {
         PlacementMode::GridDiag,
         PlacementMode::GridCompress,
     ];
-    let mut sols = Vec::new();
+    let mut param_packs = Vec::new();
     for pmode in placement_modes {
-        if let Ok(sol) = solve_greedy_impl(prob, pmode, false) {
-            sols.push((score(prob, &sol, true)?, sol));
-        }
+        param_packs.push((pmode, false));
         if is_full_division_scoring(prob) {
-            if let Ok(sol) = solve_greedy_impl(prob, pmode, true) {
-                sols.push((score(prob, &sol, true)?, sol));
-            }
+            param_packs.push((pmode, true));
         }
     }
-    let (_, sol) = sols
-        .into_iter()
-        .max_by_key(|(s, _)| *s)
+    let sol = param_packs
+        .par_iter()
+        .filter_map(|&(pmode, together_mode)| solve_greedy_impl(prob, pmode, together_mode).ok())
+        .flat_map(|sol| {
+            let hg = optimize_hungarian(prob, &sol).unwrap();
+            [sol, hg]
+        })
+        .max_by_key(|sol| score(prob, sol, true).unwrap())
         .ok_or(SolveGreedyError::FailedToGenerateSolution)?;
     Ok(sol)
 }
