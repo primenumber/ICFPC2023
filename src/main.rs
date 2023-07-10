@@ -3,6 +3,7 @@ mod common;
 mod geometry;
 mod greedy;
 mod hungarian;
+mod placement;
 mod score;
 mod visualize;
 use crate::common::*;
