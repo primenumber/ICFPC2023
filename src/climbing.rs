@@ -52,6 +52,24 @@ fn convert_to_parital_placement(
         .collect()
 }
 
+fn permute(v: &[Option<usize>], perm: &[usize]) -> Vec<Option<usize>> {
+    let mut res = vec![None; v.len()];
+    for (i, &p) in perm.iter().enumerate() {
+        res[p] = v[i];
+    }
+    res
+}
+
+fn permute_inv(v: &[Option<usize>], perm: &[usize]) -> Vec<Option<usize>> {
+    let mut res = vec![None; v.len()];
+    for (i, e) in v.iter().enumerate() {
+        if let Some(idx) = e {
+            res[i] = Some(perm[*idx]);
+        }
+    }
+    res
+}
+
 fn solve_climbing_impl(prob: &Problem, placement_mode: PlacementMode) -> Result<Solution> {
     let placement_candidates = generate_candidates(prob, placement_mode)?;
     let mut musician_to_place = vec![None; prob.musicians.len()];
@@ -90,11 +108,22 @@ fn solve_climbing_impl(prob: &Problem, placement_mode: PlacementMode) -> Result<
             .map(|e| placement_candidates[e.unwrap()])
             .collect();
 
+        let sol = Solution {
+            placements,
+            volumes: volumes.clone(),
+        };
+        let (optimized, permutation) = optimize_hungarian_2(prob, &sol);
+        musician_to_place = permute(&musician_to_place, &permutation);
+        place_to_musician = permute_inv(&place_to_musician, &permutation);
+        volumes.copy_from_slice(&optimized.volumes);
+        current_basic_score = score_partial(
+            prob,
+            &convert_to_parital_placement(&musician_to_place, &placement_candidates),
+            &volumes,
+        );
+
         if current_basic_score > best_basic_score {
-            best_sol = Some(Solution {
-                placements,
-                volumes: volumes.clone(),
-            });
+            best_sol = Some(optimized);
             best_basic_score = current_basic_score;
             best_p2m = Some(place_to_musician.clone());
             best_m2p = Some(musician_to_place.clone());
@@ -103,8 +132,9 @@ fn solve_climbing_impl(prob: &Problem, placement_mode: PlacementMode) -> Result<
             musician_to_place.copy_from_slice(&best_m2p.clone().unwrap());
             volumes.copy_from_slice(&best_sol.clone().unwrap().volumes);
         }
+        eprintln!("{} {}", best_basic_score, current_basic_score);
 
-        let k = min(30, prob.musicians.len() / 2);
+        let k = min(30, prob.musicians.len() / 4);
         let destruction_target: Vec<_> = musician_to_place
             .choose_multiple(&mut rng, k)
             .cloned()
@@ -127,8 +157,8 @@ pub fn solve_climbing(prob: &Problem) -> Result<Solution> {
     let placement_modes = [
         PlacementMode::GridNormal(InterpolateMode::Strech),
         PlacementMode::GridNormal(InterpolateMode::Corner(10.0)),
-        PlacementMode::GridDiag,
-        PlacementMode::GridCompress,
+        //PlacementMode::GridDiag,
+        //PlacementMode::GridCompress,
     ];
     let mut param_packs = Vec::new();
     for pmode in placement_modes {

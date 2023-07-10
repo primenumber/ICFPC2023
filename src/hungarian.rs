@@ -3,6 +3,7 @@ use crate::common::*;
 use crate::geometry::*;
 use crate::score::*;
 use anyhow::Result;
+use std::cmp::max;
 
 // https://ei1333.github.io/library/graph/flow/hungarian.hpp
 fn hungarian_impl(mat: &[Vec<i64>]) -> Vec<usize> {
@@ -63,16 +64,58 @@ pub fn optimize_hungarian(prob: &Problem, sol: &Solution) -> Result<Solution> {
     let m: usize = prob.musicians.len();
     let score_contrib_table = create_score_contrib_table(prob, &sol.placements, &prob.pillars);
     let mut placements = vec![Point { x: 0.0, y: 0.0 }; m];
-    let m = m + 1;
-    let p = hungarian_impl(&score_contrib_table);
+    let mat = convert_matrix_for_hungarian(&score_contrib_table);
+    let p = hungarian_impl(&mat);
 
-    for i in 1..m {
-        placements[p[i] - 1] = sol.placements[i - 1];
+    for i in 1..=m {
+        let new_musician_idx = p[i] - 1;
+        let placement_idx = i - 1;
+        placements[new_musician_idx] = sol.placements[placement_idx];
     }
     Ok(Solution {
         placements,
         volumes: sol.volumes.clone(),
     })
+}
+
+pub fn optimize_hungarian_2(prob: &Problem, sol: &Solution) -> (Solution, Vec<usize>) {
+    let m: usize = prob.musicians.len();
+    let score_contrib_table = create_score_contrib_table(prob, &sol.placements, &prob.pillars);
+    let mut placements = vec![Point { x: 0.0, y: 0.0 }; m];
+    let mat = convert_matrix_for_hungarian(&score_contrib_table);
+    let p = hungarian_impl(&mat);
+
+    let mut perm = vec![0; m];
+    for i in 1..=m {
+        let new_musician_idx = p[i] - 1;
+        let placement_idx = i - 1;
+        placements[new_musician_idx] = sol.placements[placement_idx];
+        perm[new_musician_idx] = placement_idx;
+    }
+    (
+        Solution {
+            placements,
+            volumes: sol.volumes.clone(),
+        },
+        perm,
+    )
+}
+
+fn convert_matrix_for_hungarian(orig: &[Vec<i64>]) -> Vec<Vec<i64>> {
+    let mut mat = orig.to_vec();
+    //for row in mat.iter_mut() {
+    //    for elem in row.iter_mut() {
+    //        *elem = max(*elem, 0);
+    //    }
+    //}
+    let max = *mat.iter().flatten().max().unwrap_or(&0);
+    let m = mat.len();
+    for i in 1..m {
+        for j in 1..m {
+            mat[i][j] = max - mat[i][j];
+        }
+    }
+    mat
 }
 
 fn create_score_contrib_table(
@@ -92,12 +135,6 @@ fn create_score_contrib_table(
         for (musician_idx, kind) in prob.musicians.iter().enumerate() {
             score_contrib_table[musician_idx + 1][placement_idx + 1] =
                 calc_score_contrib(&impact_attendees, kind, placements, placement_idx);
-        }
-    }
-    let max = *score_contrib_table.iter().flatten().max().unwrap_or(&0);
-    for i in 1..=m {
-        for j in 1..=m {
-            score_contrib_table[i][j] = max - score_contrib_table[i][j];
         }
     }
     score_contrib_table
