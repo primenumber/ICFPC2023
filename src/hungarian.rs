@@ -4,11 +4,9 @@ use crate::geometry::*;
 use crate::score::*;
 use anyhow::Result;
 
-pub fn optimize_hungarian(prob: &Problem, sol: &Solution) -> Result<Solution> {
-    let m: usize = prob.musicians.len();
-    let score_contrib_table = create_score_contrib_table(prob, &sol.placements, &prob.pillars);
-    let mut placements = vec![Point { x: 0.0, y: 0.0 }; m];
-    let m = m + 1;
+// https://ei1333.github.io/library/graph/flow/hungarian.hpp
+fn hungarian_impl(mat: &[Vec<i64>]) -> Vec<usize> {
+    let m = mat.len();
     let mut p = vec![0; m];
     let mut way = vec![0; m];
     let mut u = vec![0_i128; m];
@@ -30,7 +28,7 @@ pub fn optimize_hungarian(prob: &Problem, sol: &Solution) -> Result<Solution> {
                 if used[j] {
                     continue;
                 }
-                let curr = score_contrib_table[i0][j] as i128 - u[i0] - v[j];
+                let curr = mat[i0][j] as i128 - u[i0] - v[j];
                 if curr < min_v[j] {
                     min_v[j] = curr;
                     way[j] = j0;
@@ -44,6 +42,8 @@ pub fn optimize_hungarian(prob: &Problem, sol: &Solution) -> Result<Solution> {
                 if used[j] {
                     u[p[j]] += delta;
                     v[j] -= delta;
+                } else {
+                    min_v[j] -= delta;
                 }
             }
             j0 = j1;
@@ -54,9 +54,20 @@ pub fn optimize_hungarian(prob: &Problem, sol: &Solution) -> Result<Solution> {
             j0 != 0
         } {}
     }
+    p[0] = 0;
+
+    p
+}
+
+pub fn optimize_hungarian(prob: &Problem, sol: &Solution) -> Result<Solution> {
+    let m: usize = prob.musicians.len();
+    let score_contrib_table = create_score_contrib_table(prob, &sol.placements, &prob.pillars);
+    let mut placements = vec![Point { x: 0.0, y: 0.0 }; m];
+    let m = m + 1;
+    let p = hungarian_impl(&score_contrib_table);
 
     for i in 1..m {
-        placements[i - 1] = sol.placements[p[i] - 1];
+        placements[p[i] - 1] = sol.placements[i - 1];
     }
     Ok(Solution {
         placements,
@@ -119,4 +130,22 @@ fn calc_score_contrib(
         score_contrib += impact_raw(attendee, *kind, placements[placement_idx]);
     }
     score_contrib
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_hungarian() {
+        let mat = vec![
+            vec![0, 0, 0, 0, 0],
+            vec![0, 5, 4, 7, 6],
+            vec![0, 6, 7, 3, 2],
+            vec![0, 8, 11, 2, 5],
+            vec![0, 9, 8, 6, 7],
+        ];
+        let p = hungarian_impl(&mat);
+        assert_eq!(p, vec![0, 4, 1, 3, 2]);
+    }
 }
