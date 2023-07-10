@@ -10,6 +10,18 @@ pub fn impact_raw(attendee: &Attendee, kind: u32, place: Point) -> i64 {
     (1e6 * attendee.tastes[kind as usize] / dsq).ceil() as i64
 }
 
+pub fn is_blocked_by_another(attendee: &Attendee, place: Point, another_place: Point) -> bool {
+    let segment = Line {
+        p1: place,
+        p2: attendee.place(),
+    };
+    let circle = Circle {
+        c: another_place,
+        r: 5.0,
+    };
+    is_cross_line_circle(segment, circle)
+}
+
 pub fn check_pillars(attendee: &Attendee, place: Point, pillars: &[Pillar]) -> bool {
     let musician_attendee_line = Line {
         p1: attendee.place(),

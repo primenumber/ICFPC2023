@@ -12,13 +12,30 @@ pub struct DiffCache {
 }
 
 impl DiffCache {
-    pub fn new(prob: &Problem, places: &[Point]) -> DiffCache {
+    pub fn new(
+        prob: &Problem,
+        places: &[Point],
+        musician_to_place: &[Option<usize>],
+        place_to_musician: &[Option<usize>],
+        volumes: &[f64],
+    ) -> DiffCache {
         let mut visible = vec![vec![true; prob.attendees.len()]; places.len()];
         let mut impact_diff = vec![vec![0; prob.musicians.len()]; places.len()];
         for (i, &place) in places.iter().enumerate() {
             for (j, vis) in visible[i].iter_mut().enumerate() {
                 let atd = &prob.attendees[j];
                 *vis = check_pillars(atd, place, &prob.pillars);
+                for &opt_pidx in musician_to_place.iter() {
+                    let Some(pidx) = opt_pidx else { continue; };
+                    if pidx == i {
+                        continue;
+                    }
+                    let another_place = places[pidx];
+                    if is_blocked_by_another(atd, place, another_place) {
+                        *vis = false;
+                        break;
+                    }
+                }
                 if !*vis {
                     continue;
                 }
@@ -27,9 +44,27 @@ impl DiffCache {
                 }
             }
         }
-        let impact_diff_blocking = vec![vec![0; prob.musicians.len()]; places.len()];
-        let musician_to_place = vec![None; prob.musicians.len()];
-        let place_to_musician = vec![None; places.len()];
+        let mut impact_diff_blocking = vec![vec![0; prob.musicians.len()]; places.len()];
+        for (k, &kind) in prob.musicians.iter().enumerate() {
+            let Some(pidx) = musician_to_place[k] else { continue; };
+            for (j, vis) in visible[pidx].iter().enumerate() {
+                if !*vis {
+                    continue;
+                }
+                let atd = &prob.attendees[j];
+                for (i, &place) in places.iter().enumerate() {
+                    if place_to_musician[i].is_some() {
+                        continue;
+                    }
+                    if is_blocked_by_another(atd, places[pidx], place) {
+                        impact_diff_blocking[i][k] -=
+                            (impact_raw(atd, kind, places[pidx]) as f64 * volumes[k]).ceil() as i64;
+                    }
+                }
+            }
+        }
+        let musician_to_place = musician_to_place.to_vec();
+        let place_to_musician = place_to_musician.to_vec();
         DiffCache {
             places: places.to_vec(),
             visible,

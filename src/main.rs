@@ -1,4 +1,5 @@
 mod cache;
+mod climbing;
 mod common;
 mod geometry;
 mod greedy;
@@ -6,6 +7,7 @@ mod hungarian;
 mod placement;
 mod score;
 mod visualize;
+use crate::climbing::*;
 use crate::common::*;
 use crate::greedy::*;
 use crate::hungarian::*;
@@ -66,7 +68,8 @@ fn main() -> Result<()> {
     match &cli.command {
         Commands::Solve { input, output } => {
             let prob = Problem::load_from_file(input)?;
-            let sol = solve_greedy(&prob)?;
+            let sol = solve_climbing(&prob)?;
+            //let sol = solve_greedy(&prob)?;
             sol.save_to_file(output)?;
         }
         Commands::Optimize {

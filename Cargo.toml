@@ -18,3 +18,4 @@ tokio = { version = "1.29.1", features = ["full"] }
 indicatif = "0.17.5"
 ordered-float = "3.7.0"
 rayon = "1.7.0"
+rand = { version = "0.8.5", features = ["small_rng"] }

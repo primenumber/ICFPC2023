@@ -92,13 +92,21 @@ fn solve_greedy_impl(
     together_mode: bool,
 ) -> Result<Solution> {
     let placement_candidates = generate_candidates(prob, placement_mode)?;
+    let musician_to_place = vec![None; prob.musicians.len()];
+    let place_to_musician = vec![None; placement_candidates.len()];
+    let mut volumes = vec![10.0; prob.musicians.len()];
 
-    let mut cache = DiffCache::new(prob, &placement_candidates);
+    let mut cache = DiffCache::new(
+        prob,
+        &placement_candidates,
+        &musician_to_place,
+        &place_to_musician,
+        &volumes,
+    );
 
     // place musicians greedy
     let mut musicians: HashMap<_, _> = prob.musicians.clone().into_iter().enumerate().collect();
     let mut pairs = Vec::new();
-    let mut volumes = vec![10.0; musicians.len()];
     while !musicians.is_empty() {
         let (i, j, d, v) = cache.find_best_matching();
         if together_mode && d == 0 {
