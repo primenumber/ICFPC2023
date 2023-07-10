@@ -29,6 +29,10 @@ enum Commands {
         input: PathBuf,
         output: PathBuf,
     },
+    Climb {
+        input: PathBuf,
+        output: PathBuf,
+    },
     Optimize {
         problem: PathBuf,
         solution: PathBuf,
@@ -68,8 +72,12 @@ fn main() -> Result<()> {
     match &cli.command {
         Commands::Solve { input, output } => {
             let prob = Problem::load_from_file(input)?;
+            let sol = solve_greedy(&prob)?;
+            sol.save_to_file(output)?;
+        }
+        Commands::Climb { input, output } => {
+            let prob = Problem::load_from_file(input)?;
             let sol = solve_climbing(&prob)?;
-            //let sol = solve_greedy(&prob)?;
             sol.save_to_file(output)?;
         }
         Commands::Optimize {
